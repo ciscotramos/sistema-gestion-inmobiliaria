@@ -3,6 +3,7 @@ package com.inmobiliaria.backend.config;
 import com.inmobiliaria.backend.repository.UsuarioRepository;
 import com.inmobiliaria.backend.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -14,6 +15,9 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -34,6 +38,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private final UsuarioRepository usuarioRepository;
+
+    /** Orígenes permitidos por CORS, separados por coma. En producción: solo el dominio del frontend. */
+    @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
+    private List<String> allowedOrigins;
 
     public SecurityConfig(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
@@ -67,7 +75,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Orígenes permitidos (CORS)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
+        configuration.setAllowedOrigins(allowedOrigins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Origin"));
         configuration.setExposedHeaders(List.of("Authorization"));
@@ -89,6 +97,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::deny)
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("frame-ancestors 'none'"))
+                        .referrerPolicy(ref -> ref.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
+                        .addHeaderWriter(new StaticHeadersWriter(
+                                "Permissions-Policy", "camera=(), microphone=(), geolocation=()"))
+                )
                 .authorizeHttpRequests(auth -> auth
                         // Permitir preflight OPTIONS para CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

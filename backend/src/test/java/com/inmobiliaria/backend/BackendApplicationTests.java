@@ -6,10 +6,15 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@TestPropertySource(properties = {
+        "app.seed-demo-users=true",
+        "jwt.secret=solo-para-pruebas-automatizadas-0123456789abcdef-no-usar-en-produccion"
+})
 class BackendApplicationTests {
 
     @Autowired
