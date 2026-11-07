@@ -18,17 +18,19 @@ docker run -p 8080:8080 --env-file backend.env inmobiliaria-backend
 
 ## Variables de entorno
 
-Ningún secreto va en el repositorio. Todo se entrega por variables de entorno:
+Toda la configuración sensible se entrega por variables de entorno. `application.properties` trae valores por defecto
+solo para desarrollo local: **en producción define siempre `JWT_SECRET`, `DB_PASSWORD` y `DB_PASSWORD_REPLICA`**
+y no reutilices los valores por defecto.
 
 | Variable | Uso | Valor por defecto |
 | --- | --- | --- |
 | `DB_HOST`, `DB_NAME` | Host y nombre de la base | `localhost`, `inmobiliaria_db` |
 | `DB_PORT_MASTER` / `DB_PORT_REPLICA` | Puertos de escritura y lectura | `3306` / `3307` |
-| `DB_USER`, `DB_PASSWORD` | Usuario y clave del Master | `root`, sin definir |
-| `DB_USER_REPLICA`, `DB_PASSWORD_REPLICA` | Usuario y clave de la Replica | los del Master |
-| `JWT_SECRET` | Clave de firma HS256 del JWT | sin definir (obligatoria) |
+| `DB_USER`, `DB_PASSWORD` | Usuario y clave del Master | `root` y un valor de desarrollo |
+| `DB_USER_REPLICA`, `DB_PASSWORD_REPLICA` | Usuario y clave de la Replica | usuario del Master y un valor de desarrollo |
+| `JWT_SECRET` | Clave de firma HS256 del JWT | un valor de desarrollo (cámbialo en producción) |
 | `JWT_EXPIRATION` | Duración del token en milisegundos | `86400000` (24 horas) |
-| `SERVER_PORT` | Puerto HTTP | definido en `application.properties` |
+| `SERVER_PORT` | Puerto HTTP | `8080` |
 
 ## Base de datos
 
