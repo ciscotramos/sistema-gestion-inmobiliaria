@@ -1,7 +1,6 @@
 [mysqld]
 server-id=2
 relay-log=relay-bin
-log-replica-updates=ON
 gtid-mode=ON
 enforce-gtid-consistency=ON
 read-only=ON
