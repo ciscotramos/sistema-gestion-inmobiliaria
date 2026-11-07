@@ -38,3 +38,6 @@ target/
 backup_*.sql
 backend/backup_*.sql
 *.dump
+
+# Secretos locales
+.env
