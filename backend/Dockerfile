@@ -6,7 +6,7 @@ COPY src ./src
 RUN mvn -B clean package -DskipTests
 
 # Etapa 2: imagen final liviana, solo JRE 21 Alpine
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:24-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
