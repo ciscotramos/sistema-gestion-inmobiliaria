@@ -16,6 +16,9 @@ else
     START REPLICA;"
 fi
 
+# Solo lectura persistente (se aplica aquí y no en el .cnf para no bloquear el arranque inicial de la imagen).
+$R -e "SET PERSIST super_read_only=ON; SET PERSIST read_only=ON;"
+
 for i in $(seq 1 60); do
   io=$($R -e "SHOW REPLICA STATUS\G" | awk '/Replica_IO_Running:/{print $2}')
   sql=$($R -e "SHOW REPLICA STATUS\G" | awk '/Replica_SQL_Running:/{print $2}')
