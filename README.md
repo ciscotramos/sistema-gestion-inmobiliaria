@@ -26,7 +26,8 @@ Proyecto del Curso Integrador II: Sistemas (UTP sede Arequipa).
 
 ```bash
 # Backend (requiere MySQL en 3306 y 3307, o ambos apuntando a la misma instancia)
-export DB_PASSWORD=... DB_PASSWORD_REPLICA=... JWT_SECRET=...   # en producción son obligatorias
+export DB_PASSWORD=... JWT_SECRET=$(openssl rand -base64 48)   # obligatorias: sin ellas no arranca
+export SEED_DEMO_USERS=true   # solo desarrollo: crea admin y agente de ejemplo
 cd backend && mvn spring-boot:run
 
 # Frontend
@@ -41,6 +42,7 @@ La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar `backend/db
 - [Gestión de solicitudes de servicio (ITSM)](docs/solicitudes-servicio.md)
 - [Capacidad y rendimiento](docs/capacidad-rendimiento.md)
 - [Despliegue](docs/despliegue.md)
+- [Seguridad](docs/seguridad.md) y [política de seguridad](SECURITY.md)
 
 ## Alcance y pendientes
 
