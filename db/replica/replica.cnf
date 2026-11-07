@@ -1,0 +1,10 @@
+[mysqld]
+server-id=2
+relay-log=relay-bin
+log-replica-updates=ON
+gtid-mode=ON
+enforce-gtid-consistency=ON
+read-only=ON
+super-read-only=ON
+character-set-server=utf8mb4
+collation-server=utf8mb4_unicode_ci

@@ -38,3 +38,22 @@ jobs:
       - name: Construir
         run: npm run build
         working-directory: front
+
+  base-datos:
+    name: Base de datos (Master/Replica)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar MySQL Master y Replica
+        run: |
+          cat > .env <<EOF
+          DB_PASSWORD=ci-master-$(openssl rand -hex 8)
+          DB_REPLICATION_PASSWORD=ci-repl-$(openssl rand -hex 8)
+          EOF
+          docker compose up -d --wait mysql-master mysql-replica
+          docker compose up replica-init --exit-code-from replica-init
+      - name: Verificar esquema y replicación
+        run: ./scripts/verificar-replicacion.sh
+      - name: Registros si falla
+        if: failure()
+        run: docker compose logs --tail=80
