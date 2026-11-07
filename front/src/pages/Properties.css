@@ -1,0 +1,131 @@
+/* ============================================================
+   PROPERTIES PAGE
+   ============================================================ */
+
+.properties-page {
+  padding-top: 68px;
+  min-height: 100vh;
+  background: var(--color-light);
+}
+
+.properties-page-header {
+  background: var(--color-dark);
+  padding: 40px 0 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.properties-page-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201, 168, 76, 0.07) 0%, transparent 60%);
+}
+
+.properties-page-header h1 {
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--color-white);
+  position: relative;
+}
+
+.properties-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 28px;
+  padding: 32px 0 48px;
+  align-items: start;
+}
+
+/* Toolbar */
+.properties-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.properties-count {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.properties-count strong {
+  color: var(--color-dark);
+}
+
+.properties-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.properties-sort select {
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--color-white);
+  color: var(--color-text);
+  outline: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.properties-sort select:focus {
+  border-color: var(--color-primary);
+}
+
+/* Grid */
+.properties-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+/* Empty state */
+.properties-empty {
+  text-align: center;
+  padding: 80px 24px;
+  grid-column: 1 / -1;
+}
+
+.properties-empty .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.properties-empty h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.properties-empty p {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 1100px) {
+  .properties-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .properties-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .properties-grid {
+    grid-template-columns: 1fr;
+  }
+}
