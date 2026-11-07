@@ -6,8 +6,15 @@ DB=${DB_NAME:-inmobiliaria_db}
 M="docker exec inmobiliaria-master mysql -uroot -p${DB_PASSWORD} -N $DB"
 R="docker exec inmobiliaria-replica mysql -uroot -p${DB_PASSWORD_REPLICA:-$DB_PASSWORD} -N $DB"
 
+# La Replica aplica el esquema de forma asíncrona: esperar a que se iguale.
+for i in $(seq 1 30); do
+  [ "$($M -e 'SHOW TABLES' 2>/dev/null | wc -l)" = "$($R -e 'SHOW TABLES' 2>/dev/null | wc -l)" ] && break
+  sleep 2
+done
 echo "Tablas en Master:  $($M -e 'SHOW TABLES' 2>/dev/null | wc -l)"
-echo "Tablas en Replica: $($R -e 'SHOW TABLES' 2>/dev/null | wc -l)"
+n_replica=$($R -e 'SHOW TABLES' 2>/dev/null | wc -l)
+echo "Tablas en Replica: $n_replica"
+[ "$n_replica" = "13" ] || { echo "FALLO: se esperaban 13 tablas en la Replica."; exit 1; }
 
 $M -e "INSERT INTO caracteristicas (nombre, categoria) VALUES ('__prueba_replicacion__', 'Interior')" 2>/dev/null
 sleep 2
