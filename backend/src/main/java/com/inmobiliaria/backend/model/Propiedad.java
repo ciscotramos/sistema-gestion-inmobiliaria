@@ -70,6 +70,11 @@ public class Propiedad {
     @Column(nullable = false)
     private Boolean activo = true;
 
+    /** Bloqueo optimista: Hibernate incrementa este valor en cada UPDATE. */
+    @Version
+    @Column(nullable = false)
+    private Integer version;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -252,6 +257,14 @@ public class Propiedad {
 
     public void setDestacada(Boolean destacada) {
         this.destacada = destacada;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 
     public Boolean getActivo() {

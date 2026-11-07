@@ -12,6 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -118,7 +120,7 @@ public class PropiedadService {
         return new PropiedadResponseDTO(propiedad);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public PropiedadResponseDTO crearPropiedad(PropiedadCreateDTO dto, Usuario usuarioActual) {
         UbicacionDistrito distrito = distritoRepository.findById(dto.getDistritoId())
                 .orElseThrow(() -> new ResourceNotFoundException("Distrito no encontrado con ID: " + dto.getDistritoId()));
@@ -178,13 +180,19 @@ public class PropiedadService {
         return new PropiedadResponseDTO(guardada);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public PropiedadResponseDTO actualizarPropiedad(Integer id, PropiedadUpdateDTO dto, Usuario usuarioActual) {
         Propiedad propiedad = propiedadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada con ID: " + id));
 
         // Validación de permisos: AGENTE solo puede modificar sus propiedades
         validarPropiedadDeAgente(propiedad, usuarioActual);
+
+        // Bloqueo optimista: si el cliente leyó una versión anterior, alguien ya modificó el registro
+        if (dto.getVersion() != null && !dto.getVersion().equals(propiedad.getVersion())) {
+            throw new OptimisticLockingFailureException(
+                    "La propiedad " + id + " fue modificada por otro usuario. Recargue e intente nuevamente.");
+        }
 
         if (dto.getTitulo() != null) propiedad.setTitulo(dto.getTitulo().trim());
         if (dto.getDescripcion() != null) propiedad.setDescripcion(dto.getDescripcion().trim());
@@ -223,7 +231,7 @@ public class PropiedadService {
         return new PropiedadResponseDTO(actualizada);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public PropiedadResponseDTO cambiarEstado(Integer id, String nuevoEstado, Usuario usuarioActual) {
         Propiedad propiedad = propiedadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada con ID: " + id));
@@ -235,7 +243,7 @@ public class PropiedadService {
         return new PropiedadResponseDTO(actualizada);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void desactivarPropiedad(Integer id, Usuario usuarioActual) {
         Propiedad propiedad = propiedadRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Propiedad no encontrada con ID: " + id));
