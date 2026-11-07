@@ -49,6 +49,7 @@ jobs:
           cat > .env <<EOF
           DB_PASSWORD=ci-master-$(openssl rand -hex 8)
           DB_REPLICATION_PASSWORD=ci-repl-$(openssl rand -hex 8)
+          JWT_SECRET=ci-jwt-$(openssl rand -hex 24)
           EOF
           docker compose up -d --wait mysql-master mysql-replica
           docker compose up replica-init --exit-code-from replica-init
