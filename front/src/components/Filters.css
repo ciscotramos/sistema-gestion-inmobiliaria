@@ -1,0 +1,145 @@
+/* ============================================================
+   FILTERS
+   ============================================================ */
+
+.filters {
+  background: var(--color-white);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  position: sticky;
+  top: 84px;
+}
+
+.filters-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-dark);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filters-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.filter-section {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filter-section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.filter-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-muted);
+  margin-bottom: 12px;
+}
+
+/* Radio / Checkbox groups */
+.filter-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  transition: var(--transition);
+}
+
+.filter-option:hover {
+  color: var(--color-primary);
+}
+
+.filter-option input[type="radio"],
+.filter-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Price range */
+.filter-price-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.filter-price-row .form-control {
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* Buttons */
+.filters-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.filters-actions .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.btn-clear {
+  background: none;
+  border: none;
+  color: var(--color-muted);
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  padding: 6px;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.btn-clear:hover {
+  color: var(--color-primary);
+}
+
+/* Mobile filter toggle */
+.filters-mobile-toggle {
+  display: none;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+  .filters {
+    position: static;
+  }
+
+  .filters-mobile-toggle {
+    display: flex;
+  }
+
+  .filters-collapsible {
+    display: none;
+  }
+
+  .filters-collapsible.open {
+    display: block;
+  }
+}
