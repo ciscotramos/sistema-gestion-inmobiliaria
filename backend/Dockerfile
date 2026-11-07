@@ -1,9 +1,13 @@
-FROM eclipse-temurin:21-jre-alpine
-
+# Etapa 1: compilar con Maven 3.9.6 y Temurin 21
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+RUN mvn -B clean package -DskipTests
 
-COPY target/*.jar app.jar
-
+# Etapa 2: imagen final liviana, solo JRE 21 Alpine
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
