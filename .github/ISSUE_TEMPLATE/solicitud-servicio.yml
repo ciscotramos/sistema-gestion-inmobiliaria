@@ -1,0 +1,41 @@
+name: Solicitud de servicio
+description: Registrar una solicitud o incidencia (flujo ITSM de 6 pasos)
+title: "[Solicitud] "
+labels: ["solicitud-de-servicio"]
+body:
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo de solicitud
+      options:
+        - 1. Solicitud de información (prioridad Baja)
+        - 2. Creación y gestión de usuarios (prioridad Media)
+        - 3. Problemas de autenticación (prioridad Alta)
+        - 4. Incidencias en propiedades (prioridad Alta)
+        - 5. Incidencias en operaciones comerciales (prioridad Alta)
+        - 6. Solicitudes de modificación (prioridad Media)
+        - 7. Errores de funcionamiento (prioridad Alta)
+    validations:
+      required: true
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: Prioridad
+      options: [Alta, Media, Baja]
+    validations:
+      required: true
+  - type: textarea
+    id: descripcion
+    attributes:
+      label: Descripción del requerimiento o incidencia
+      description: Qué ocurrió, en qué pantalla o endpoint, y qué se esperaba.
+    validations:
+      required: true
+  - type: textarea
+    id: pasos
+    attributes:
+      label: Pasos para reproducirlo
+  - type: input
+    id: responsable
+    attributes:
+      label: Responsable asignado
