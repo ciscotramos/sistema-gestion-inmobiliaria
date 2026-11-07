@@ -16,6 +16,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
       MYSQL_DATABASE: ${DB_NAME:-inmobiliaria_db}
       MYSQL_REPLICATION_PASSWORD: ${DB_REPLICATION_PASSWORD:?Define DB_REPLICATION_PASSWORD en .env}
+      MYSQL_ROOT_HOST: "%"
       TZ: UTC
     ports:
       - "127.0.0.1:${DB_PORT_MASTER:-3306}:3306"
@@ -40,6 +41,7 @@ services:
         condition: service_healthy
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD_REPLICA:-${DB_PASSWORD}}
+      MYSQL_ROOT_HOST: "%"
       TZ: UTC
     ports:
       - "127.0.0.1:${DB_PORT_REPLICA:-3307}:3306"
