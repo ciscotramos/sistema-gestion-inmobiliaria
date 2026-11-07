@@ -4,6 +4,8 @@ import com.inmobiliaria.backend.dto.ErrorResponseDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -100,6 +102,44 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDTO> handleEmailAlreadyExistsException(
             EmailAlreadyExistsException ex, HttpServletRequest request) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /** Edición simultánea detectada por @Version: el cliente debe recargar y reintentar. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponseDTO> handleOptimisticLockingFailure(
+            OptimisticLockingFailureException ex, HttpServletRequest request) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                "El recurso fue modificado por otro usuario mientras lo editaba. Recargue los datos e intente nuevamente.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /** Bloqueo pesimista no obtenido (timeout o deadlock): el recurso está en uso. */
+    @ExceptionHandler(PessimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponseDTO> handlePessimisticLockingFailure(
+            PessimisticLockingFailureException ex, HttpServletRequest request) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                HttpStatus.CONFLICT.value(),
+                "Conflict",
+                "El recurso está siendo procesado por otro usuario. Intente nuevamente en unos segundos.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    @ExceptionHandler(PropiedadNoDisponibleException.class)
+    public ResponseEntity<ErrorResponseDTO> handlePropiedadNoDisponible(
+            PropiedadNoDisponibleException ex, HttpServletRequest request) {
         ErrorResponseDTO error = new ErrorResponseDTO(
                 HttpStatus.CONFLICT.value(),
                 "Conflict",
