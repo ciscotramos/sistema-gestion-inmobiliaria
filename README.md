@@ -42,6 +42,7 @@ La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar `backend/db
 - [Gestión de solicitudes de servicio (ITSM)](docs/solicitudes-servicio.md)
 - [Capacidad y rendimiento](docs/capacidad-rendimiento.md)
 - [Despliegue](docs/despliegue.md)
+- [Base de datos (Master/Replica)](docs/base-de-datos.md)
 - [Seguridad](docs/seguridad.md) y [política de seguridad](SECURITY.md)
 
 ## Alcance y pendientes
