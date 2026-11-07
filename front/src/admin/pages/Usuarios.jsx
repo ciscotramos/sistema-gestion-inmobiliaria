@@ -283,7 +283,7 @@ export default function Usuarios() {
             </div>
             <div className="admin-form-group">
               <label className="admin-form-label">Contraseña inicial</label>
-              <input type="text" className="admin-form-control" placeholder="Ej. agente123"
+              <input type="password" autoComplete="new-password" className="admin-form-control" placeholder="Mínimo 8 caracteres, con letras y números"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </div>
