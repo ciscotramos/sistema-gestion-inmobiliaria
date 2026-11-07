@@ -51,6 +51,12 @@ public class PropiedadUpdateDTO {
 
     private Integer agenteId;
 
+    /**
+     * Versión que el cliente leyó. Si se envía y ya no coincide con la
+     * almacenada, la actualización se rechaza con HTTP 409 (bloqueo optimista).
+     */
+    private Integer version;
+
     @Pattern(
         regexp = "^(Disponible|Reservado|Vendido|Alquilado|Inactivo)$",
         message = "El estado debe ser: Disponible, Reservado, Vendido, Alquilado o Inactivo"
@@ -199,5 +205,13 @@ public class PropiedadUpdateDTO {
 
     public void setCaracteristicasIds(Set<Integer> caracteristicasIds) {
         this.caracteristicasIds = caracteristicasIds;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 }
