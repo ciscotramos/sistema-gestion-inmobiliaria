@@ -18,19 +18,23 @@ docker run -p 8080:8080 --env-file backend.env inmobiliaria-backend
 
 ## Variables de entorno
 
-Toda la configuración sensible se entrega por variables de entorno. `application.properties` trae valores por defecto
-solo para desarrollo local: **en producción define siempre `JWT_SECRET`, `DB_PASSWORD` y `DB_PASSWORD_REPLICA`**
-y no reutilices los valores por defecto.
+Toda la configuración sensible se entrega por variables de entorno. `JWT_SECRET` y `DB_PASSWORD` **no tienen valor por defecto**:
+sin ellas la aplicación no arranca. Ver la lista completa en [seguridad.md](seguridad.md).
 
 | Variable | Uso | Valor por defecto |
 | --- | --- | --- |
 | `DB_HOST`, `DB_NAME` | Host y nombre de la base | `localhost`, `inmobiliaria_db` |
 | `DB_PORT_MASTER` / `DB_PORT_REPLICA` | Puertos de escritura y lectura | `3306` / `3307` |
-| `DB_USER`, `DB_PASSWORD` | Usuario y clave del Master | `root` y un valor de desarrollo |
-| `DB_USER_REPLICA`, `DB_PASSWORD_REPLICA` | Usuario y clave de la Replica | usuario del Master y un valor de desarrollo |
-| `JWT_SECRET` | Clave de firma HS256 del JWT | un valor de desarrollo (cámbialo en producción) |
-| `JWT_EXPIRATION` | Duración del token en milisegundos | `86400000` (24 horas) |
+| `DB_USER`, `DB_PASSWORD` | Usuario y clave del Master | `root`, y la clave es obligatoria |
+| `DB_USER_REPLICA`, `DB_PASSWORD_REPLICA` | Usuario y clave de la Replica | los del Master |
+| `JWT_SECRET` | Clave de firma HS256 del JWT (32 caracteres o más) | obligatoria |
+| `JWT_EXPIRATION` | Duración del token en milisegundos | `7200000` (2 horas) |
 | `SERVER_PORT` | Puerto HTTP | `8080` |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend permitidos | solo localhost |
+| `DB_SSL_MODE` | Modo TLS hacia MySQL | `PREFERRED` |
+| `SWAGGER_ENABLED` | Publica Swagger UI y `/v3/api-docs` | `true` |
+| `SEED_DEMO_USERS` | Crea usuarios de ejemplo (solo desarrollo) | `false` |
+| `APP_ADMIN_EMAIL`, `APP_ADMIN_PASSWORD` | Primer administrador real | sin definir |
 
 ## Base de datos
 
