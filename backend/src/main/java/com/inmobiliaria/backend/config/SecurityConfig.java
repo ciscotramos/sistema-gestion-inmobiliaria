@@ -93,6 +93,7 @@ public class SecurityConfig {
                         // Permitir preflight OPTIONS para CORS
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Rutas públicas
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/distritos/**").permitAll()
@@ -107,6 +108,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/propiedades/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/propiedades/**").hasAnyRole("ADMIN", "AGENTE")
+                        .requestMatchers("/api/operaciones/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/agente/**").hasAnyRole("ADMIN", "AGENTE")
                         // Cualquier otra petición debe estar autenticada

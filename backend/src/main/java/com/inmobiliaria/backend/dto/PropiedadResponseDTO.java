@@ -10,6 +10,7 @@ import java.util.regex.Pattern;
 public class PropiedadResponseDTO {
 
     private Integer id;
+    private Integer version;
     private String titulo;
     private String descripcion;
     private String operacion;
@@ -41,6 +42,7 @@ public class PropiedadResponseDTO {
     public PropiedadResponseDTO(Propiedad propiedad) {
         if (propiedad != null) {
             this.id = propiedad.getId();
+            this.version = propiedad.getVersion();
             this.titulo = propiedad.getTitulo();
             this.descripcion = propiedad.getDescripcion();
             this.operacion = propiedad.getOperacion();
@@ -340,5 +342,13 @@ public class PropiedadResponseDTO {
         }
 
         return limpia + ", " + sufijoEstandar;
+    }
+
+    public Integer getVersion() {
+        return version;
+    }
+
+    public void setVersion(Integer version) {
+        this.version = version;
     }
 }
