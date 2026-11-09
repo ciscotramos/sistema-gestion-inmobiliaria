@@ -8,6 +8,6 @@ import java.util.List;
 
 @Repository
 public interface TicketRepository extends JpaRepository<Ticket, Integer> {
-    List<Ticket> findAllByOrderByFechaRegistroDesc();
-    List<Ticket> findByReportadoPorIdOrderByFechaRegistroDesc(Integer usuarioId);
+    List<Ticket> findAllByOrderByFechaRegistroDescIdDesc();
+    List<Ticket> findByReportadoPorIdOrderByFechaRegistroDescIdDesc(Integer usuarioId);
 }
