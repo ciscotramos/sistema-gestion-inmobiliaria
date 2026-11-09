@@ -610,6 +610,10 @@
 .status-reservado   { background: rgba(245, 158, 11, 0.12); color: #b45309; }
 .status-admin       { background: rgba(201, 168, 76, 0.15); color: #a8872e; }
 .status-agente      { background: rgba(59, 130, 246, 0.12); color: #1d4ed8; }
+.status-p1          { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; }
+.status-p2          { background: rgba(249, 115, 22, 0.12); color: #c2410c; }
+.status-p3          { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.status-p4          { background: rgba(107, 114, 128, 0.12); color: #374151; }
 .status-pagado      { background: rgba(34, 197, 94, 0.12);  color: #15803d; }
 .status-pagada      { background: rgba(34, 197, 94, 0.12);  color: #15803d; }
 
