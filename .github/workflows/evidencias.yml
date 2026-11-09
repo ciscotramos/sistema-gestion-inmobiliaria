@@ -47,7 +47,7 @@ jobs:
         run: |
           set -a; source .env; set +a
           mkdir -p evidencias
-          M="docker exec inmobiliaria-master mysql -uroot -p$DB_PASSWORD --table inmobiliaria_db"
+          M="docker exec inmobiliaria-master mysql -uroot -p$DB_PASSWORD --default-character-set=utf8mb4 --table inmobiliaria_db"
           {
             echo "mysql> SHOW TABLES;"
             $M -e "SHOW TABLES;" 2>/dev/null

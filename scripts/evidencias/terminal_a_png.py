@@ -3,7 +3,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 entrada, salida, titulo = sys.argv[1], sys.argv[2], sys.argv[3]
-lineas = open(entrada, encoding="utf-8").read().rstrip("\n").split("\n")
+lineas = open(entrada, encoding="utf-8", errors="replace").read().rstrip("\n").split("\n")
 fuente = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 15)
 ancho = max(len(l) for l in lineas + [titulo]) * 9 + 40
 alto = (len(lineas) + 3) * 21 + 20
