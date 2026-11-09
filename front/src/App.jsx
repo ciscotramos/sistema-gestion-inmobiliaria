@@ -30,6 +30,7 @@ const Usuarios       = lazy(() => import("./admin/pages/Usuarios"));
 const Reportes       = lazy(() => import("./admin/pages/Reportes"));
 const ContactosAgente = lazy(() => import("./admin/pages/ContactosAgente"));
 const PerfilAgente   = lazy(() => import("./admin/pages/PerfilAgente"));
+const Incidentes     = lazy(() => import("./admin/pages/Incidentes"));
 
 /** Spinner mínimo para Suspense fallback — no bloquea pintura */
 function PageLoader() {
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/admin/comisiones" element={<Comisiones />} />
               <Route path="/admin/usuarios" element={<Usuarios />} />
               <Route path="/admin/contactos" element={<ContactosAgente />} />
+              <Route path="/admin/incidentes" element={<Incidentes />} />
               <Route path="/admin/reportes" element={<Reportes />} />
             </Route>
 
@@ -109,6 +111,7 @@ export default function App() {
               <Route path="/agente/clientes" element={<Clientes />} />
               <Route path="/agente/alquileres" element={<Alquileres />} />
               <Route path="/agente/contactos" element={<ContactosAgente />} />
+              <Route path="/agente/incidentes" element={<Incidentes />} />
               <Route path="/agente/perfil" element={<PerfilAgente />} />
             </Route>
 

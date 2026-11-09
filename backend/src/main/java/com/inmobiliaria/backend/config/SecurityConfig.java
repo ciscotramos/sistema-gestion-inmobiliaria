@@ -124,6 +124,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/propiedades/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers(HttpMethod.PATCH, "/api/propiedades/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers("/api/operaciones/**").hasAnyRole("ADMIN", "AGENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/api/tickets/**").hasRole("ADMIN")
+                        .requestMatchers("/api/tickets/**").hasAnyRole("ADMIN", "AGENTE")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/agente/**").hasAnyRole("ADMIN", "AGENTE")
                         // Cualquier otra petición debe estar autenticada
