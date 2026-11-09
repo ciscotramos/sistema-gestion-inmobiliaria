@@ -45,13 +45,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.language == 'java-kotlin' && 'manual' || 'none' }}
       - name: Compilar el backend para el análisis
         if: matrix.language == 'java-kotlin'
         run: mvn -B -f backend/pom.xml -DskipTests package
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
