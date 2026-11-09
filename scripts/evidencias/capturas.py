@@ -27,6 +27,7 @@ with sync_playwright() as p:
     page.fill("input[placeholder^='Ej.: Error 500']", "Error 500 al registrar un cliente nuevo")
     page.fill("textarea", "Al guardar un cliente nuevo desde el panel, la API responde 500 y el registro no se completa.")
     selects = page.locator(".modal-overlay select")
+    selects.nth(0).select_option("Errores de funcionamiento")
     selects.nth(1).select_option("Alto")
     selects.nth(2).select_option("Media")
     page.wait_for_timeout(400)

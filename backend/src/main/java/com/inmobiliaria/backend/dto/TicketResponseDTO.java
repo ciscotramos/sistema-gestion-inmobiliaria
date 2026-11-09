@@ -2,7 +2,9 @@ package com.inmobiliaria.backend.dto;
 
 import com.inmobiliaria.backend.model.Ticket;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 public class TicketResponseDTO {
 
@@ -21,9 +23,9 @@ public class TicketResponseDTO {
     private Integer asignadoAId;
     private String asignadoA;
     private String solucion;
-    private LocalDateTime fechaRegistro;
-    private LocalDateTime fechaLimiteSla;
-    private LocalDateTime fechaResolucion;
+    private Instant fechaRegistro;
+    private Instant fechaLimiteSla;
+    private Instant fechaResolucion;
     private boolean slaVencido;
 
     public TicketResponseDTO() {}
@@ -46,11 +48,19 @@ public class TicketResponseDTO {
             this.asignadoA = t.getAsignadoA().getNombre();
         }
         this.solucion = t.getSolucion();
-        this.fechaRegistro = t.getFechaRegistro();
-        this.fechaLimiteSla = t.getFechaLimiteSla();
-        this.fechaResolucion = t.getFechaResolucion();
+        this.fechaRegistro = aInstante(t.getFechaRegistro());
+        this.fechaLimiteSla = aInstante(t.getFechaLimiteSla());
+        this.fechaResolucion = aInstante(t.getFechaResolucion());
         LocalDateTime referencia = t.getFechaResolucion() != null ? t.getFechaResolucion() : ahora;
         this.slaVencido = referencia.isAfter(t.getFechaLimiteSla());
+    }
+
+    /**
+     * Las fechas se generan con la hora del servidor; se envían como instantes UTC (sufijo Z)
+     * para que cada navegador las muestre en su propia zona horaria.
+     */
+    private static Instant aInstante(LocalDateTime fecha) {
+        return fecha == null ? null : fecha.atZone(ZoneId.systemDefault()).toInstant();
     }
 
     public Integer getId() { return id; }
@@ -68,8 +78,8 @@ public class TicketResponseDTO {
     public Integer getAsignadoAId() { return asignadoAId; }
     public String getAsignadoA() { return asignadoA; }
     public String getSolucion() { return solucion; }
-    public LocalDateTime getFechaRegistro() { return fechaRegistro; }
-    public LocalDateTime getFechaLimiteSla() { return fechaLimiteSla; }
-    public LocalDateTime getFechaResolucion() { return fechaResolucion; }
+    public Instant getFechaRegistro() { return fechaRegistro; }
+    public Instant getFechaLimiteSla() { return fechaLimiteSla; }
+    public Instant getFechaResolucion() { return fechaResolucion; }
     public boolean isSlaVencido() { return slaVencido; }
 }

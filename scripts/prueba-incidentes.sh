@@ -29,6 +29,7 @@ RESP=$(curl -s -X POST "$BASE/api/tickets" -H "$AUTH" -H "$JSON" -d '{
 ID=$(echo "$RESP" | jq -r .id); PRIO=$(echo "$RESP" | jq -r .prioridad); EST=$(echo "$RESP" | jq -r .estado)
 [ "$PRIO" = "P1" ] || fallo "se esperaba P1 y llegó '$PRIO' ($RESP)"
 [ "$EST" = "Abierto" ] || fallo "se esperaba estado Abierto"
+[ "$(echo "$RESP" | jq -r .prioridadNombre)" = "Crítico" ] || fallo "tildes mal guardadas: llegó '$(echo "$RESP" | jq -r .prioridadNombre)' (juego de caracteres de la BD)"
 echo "OK: ticket $(echo "$RESP" | jq -r .codigo) creado con prioridad $PRIO y SLA $(echo "$RESP" | jq -r .tiempoSlaHoras) h."
 
 # 2. Validaciones: tipo inventado y HTML en la descripción
