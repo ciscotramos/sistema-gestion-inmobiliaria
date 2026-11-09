@@ -10,7 +10,7 @@ Proyecto del Curso Integrador II: Sistemas (UTP sede Arequipa).
 | Frontend | React + Vite (`front/`) |
 | Backend | Java 21, Spring Boot 3.3.4, Spring Security, JWT (HS256), BCrypt (`backend/`) |
 | Persistencia | Spring Data JPA / Hibernate, HikariCP |
-| Base de datos | MySQL 8.0 con Master (3306) y Replica (3307), 13 tablas |
+| Base de datos | MySQL 8.0 con Master (3306) y Replica (3307), 16 tablas |
 | Documentación de la API | SpringDoc OpenAPI 2.6.0, Swagger UI en `/swagger-ui.html` |
 | Despliegue | Docker multi-stage, Render, HTTPS |
 
@@ -43,6 +43,7 @@ La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar `backend/db
 - [Capacidad y rendimiento](docs/capacidad-rendimiento.md)
 - [Despliegue](docs/despliegue.md)
 - [Base de datos (Master/Replica)](docs/base-de-datos.md)
+- [Gestión de incidentes (tickets)](docs/incidentes.md)
 - [Seguridad](docs/seguridad.md) y [política de seguridad](SECURITY.md)
 
 ## Alcance y pendientes
