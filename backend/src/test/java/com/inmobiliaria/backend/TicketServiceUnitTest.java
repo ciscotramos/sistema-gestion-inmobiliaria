@@ -208,8 +208,8 @@ class TicketServiceUnitTest {
     void listar_elAgenteSoloVeLosSuyosYElAdminTodos() {
         service.listar(agente);
         service.listar(admin);
-        org.mockito.Mockito.verify(ticketRepository).findByReportadoPorIdOrderByFechaRegistroDesc(2);
-        org.mockito.Mockito.verify(ticketRepository).findAllByOrderByFechaRegistroDesc();
+        org.mockito.Mockito.verify(ticketRepository).findByReportadoPorIdOrderByFechaRegistroDescIdDesc(2);
+        org.mockito.Mockito.verify(ticketRepository).findAllByOrderByFechaRegistroDescIdDesc();
     }
 
     @Test

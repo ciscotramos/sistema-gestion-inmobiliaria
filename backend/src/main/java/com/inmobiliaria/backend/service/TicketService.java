@@ -120,8 +120,8 @@ public class TicketService {
     public List<TicketResponseDTO> listar(Usuario actual) {
         LocalDateTime ahora = LocalDateTime.now();
         List<Ticket> tickets = esAdmin(actual)
-                ? ticketRepository.findAllByOrderByFechaRegistroDesc()
-                : ticketRepository.findByReportadoPorIdOrderByFechaRegistroDesc(actual.getId());
+                ? ticketRepository.findAllByOrderByFechaRegistroDescIdDesc()
+                : ticketRepository.findByReportadoPorIdOrderByFechaRegistroDescIdDesc(actual.getId());
         return tickets.stream().map(t -> new TicketResponseDTO(t, ahora)).toList();
     }
 
