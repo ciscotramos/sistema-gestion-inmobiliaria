@@ -8,7 +8,7 @@ on:
     branches: [feature/evidencias]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   capturas:
@@ -90,6 +90,17 @@ jobs:
         with:
           name: evidencias-sesion27
           path: evidencias/*.png
+      - name: Publicar capturas en la rama capturas-evidencias
+        run: |
+          cp -r evidencias /tmp/evidencias_png
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan capturas-evidencias
+          git rm -rf -q . || true
+          mkdir -p capturas && cp /tmp/evidencias_png/*.png capturas/
+          git add capturas
+          git commit -q -m "Capturas reales del sistema (sesión 27)"
+          git push -q -f origin capturas-evidencias
       - name: Registros si falla
         if: failure()
         run: docker compose logs --tail=60; cat vite.log || true
