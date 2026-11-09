@@ -7,6 +7,8 @@
 -- 14. TABLA: prioridades (catálogo)
 -- Propósito: Niveles de prioridad ITIL (impacto x urgencia) y su tiempo SLA de resolución
 -- -----------------------------------------------------------------------------
+SET NAMES utf8mb4;
+
 CREATE TABLE IF NOT EXISTS prioridades (
     id INT NOT NULL AUTO_INCREMENT,
     nivel VARCHAR(2) NOT NULL,
