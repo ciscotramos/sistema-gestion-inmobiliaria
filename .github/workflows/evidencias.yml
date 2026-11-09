@@ -1,0 +1,106 @@
+name: Evidencias
+
+# Levanta el sistema completo (MySQL Master/Replica, backend y frontend), registra tickets reales
+# y guarda capturas de pantalla como artefacto descargable. Ejecución manual.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feature/evidencias]
+
+permissions:
+  contents: write
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar base de datos y backend
+        run: |
+          cat > .env <<EOF
+          DB_PASSWORD=ev-master-$(openssl rand -hex 8)
+          DB_REPLICATION_PASSWORD=ev-repl-$(openssl rand -hex 8)
+          JWT_SECRET=ev-jwt-$(openssl rand -hex 24)
+          APP_ADMIN_EMAIL=admin@inmobiliaria.com
+          APP_ADMIN_PASSWORD=Evidencia-$(openssl rand -hex 6)
+          CORS_ALLOWED_ORIGINS=http://localhost:4173
+          EOF
+          docker compose up -d --wait mysql-master mysql-replica
+          docker compose up replica-init --exit-code-from replica-init
+          docker compose --profile app up -d --build backend
+      - name: Datos reales de ejemplo (tickets de distinta prioridad)
+        run: |
+          set -a; source .env; set +a
+          for i in $(seq 1 60); do
+            T=$(curl -s -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+              -d "{\"email\":\"$APP_ADMIN_EMAIL\",\"password\":\"$APP_ADMIN_PASSWORD\"}" | jq -r '.token // empty')
+            [ -n "$T" ] && break; sleep 3
+          done
+          [ -n "$T" ] || { echo "backend no disponible"; docker compose logs backend | tail -50; exit 1; }
+          crear() { curl -s -o /dev/null -X POST localhost:8080/api/tickets -H "Authorization: Bearer $T" -H 'Content-Type: application/json' -d "$1"; }
+          crear '{"tipo":"Problemas de autenticación","titulo":"Nadie puede iniciar sesión","descripcion":"El login devuelve error para todos los usuarios desde las 9:00.","impacto":"Alto","urgencia":"Alta"}'
+          crear '{"tipo":"Incidencias en propiedades","titulo":"No se actualiza el estado de una propiedad","descripcion":"Al marcar una propiedad como Reservada el cambio no se guarda.","impacto":"Medio","urgencia":"Alta"}'
+          crear '{"tipo":"Errores de funcionamiento","titulo":"Filtro por precio no ordena bien","descripcion":"El filtro de propiedades por precio muestra resultados desordenados.","impacto":"Medio","urgencia":"Media"}'
+          crear '{"tipo":"Solicitudes de modificación","titulo":"Cambiar texto de la página Nosotros","descripcion":"Se solicita actualizar el texto de la misión en la página Nosotros.","impacto":"Bajo","urgencia":"Baja"}'
+          sleep 3
+      - name: Capturas de la base de datos
+        run: |
+          set -a; source .env; set +a
+          mkdir -p evidencias
+          M="docker exec inmobiliaria-master mysql -uroot -p$DB_PASSWORD --default-character-set=utf8mb4 --table inmobiliaria_db"
+          {
+            echo "mysql> SHOW TABLES;"
+            $M -e "SHOW TABLES;" 2>/dev/null
+            echo
+            echo "mysql> SELECT * FROM prioridades;"
+            $M -e "SELECT * FROM prioridades;" 2>/dev/null
+            echo
+            echo "mysql> SELECT * FROM estados_ticket;"
+            $M -e "SELECT * FROM estados_ticket;" 2>/dev/null
+          } > evidencias/bd1.txt
+          {
+            echo "mysql> DESCRIBE tickets;"
+            $M -e "DESCRIBE tickets;" 2>/dev/null | cut -c1-120
+            echo
+            echo "mysql> SELECT t.codigo, p.nivel, e.nombre AS estado, t.titulo FROM tickets t"
+            echo "    -> JOIN prioridades p ON p.id=t.prioridad_id JOIN estados_ticket e ON e.id=t.estado_id;"
+            $M -e "SELECT t.codigo, p.nivel, e.nombre AS estado, t.titulo FROM tickets t JOIN prioridades p ON p.id=t.prioridad_id JOIN estados_ticket e ON e.id=t.estado_id;" 2>/dev/null
+          } > evidencias/bd2.txt
+          pip install --quiet pillow
+          python3 scripts/evidencias/terminal_a_png.py evidencias/bd1.txt evidencias/00a_base_de_datos_tablas.png "MySQL Master - inmobiliaria_db"
+          python3 scripts/evidencias/terminal_a_png.py evidencias/bd2.txt evidencias/00b_base_de_datos_tickets.png "MySQL Master - inmobiliaria_db"
+          cat evidencias/bd1.txt evidencias/bd2.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: front/package-lock.json
+      - name: Capturas de la pantalla (formulario y listado)
+        run: |
+          set -a; source .env; set +a
+          cd front && npm ci --silent
+          VITE_API_URL=http://localhost:8080 npm run build --silent
+          nohup npx vite preview --port 4173 --strictPort > ../vite.log 2>&1 &
+          sleep 5
+          cd .. && pip install --quiet playwright
+          python3 -m playwright install --with-deps chromium > /dev/null
+          python3 scripts/evidencias/capturas.py evidencias
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencias-sesion27
+          path: evidencias/*.png
+      - name: Publicar capturas en la rama capturas-evidencias
+        run: |
+          cp -r evidencias /tmp/evidencias_png
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan capturas-evidencias
+          git rm -rf -q . || true
+          mkdir -p capturas && cp /tmp/evidencias_png/*.png capturas/
+          git add capturas
+          git commit -q -m "Capturas reales del sistema (sesión 27)"
+          git push -q -f origin capturas-evidencias
+      - name: Registros si falla
+        if: failure()
+        run: docker compose logs --tail=60; cat vite.log || true
