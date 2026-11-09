@@ -126,6 +126,18 @@ public class GlobalExceptionHandler {
     }
 
     /** Edición simultánea detectada por @Version: el cliente debe recargar y reintentar. */
+    @ExceptionHandler(TicketInvalidoException.class)
+    public ResponseEntity<ErrorResponseDTO> handleTicketInvalido(
+            TicketInvalidoException ex, HttpServletRequest request) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                HttpStatus.BAD_REQUEST.value(),
+                "Bad Request",
+                ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
     @ExceptionHandler(OptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponseDTO> handleOptimisticLockingFailure(
             OptimisticLockingFailureException ex, HttpServletRequest request) {

@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { to: "/admin/comisiones",  icon: "💰", label: "Comisiones" },
   { to: "/admin/usuarios",    icon: "👤", label: "Usuarios / Agentes" },
   { to: "/admin/operaciones", icon: "🤝", label: "Operaciones" },
+  { to: "/admin/incidentes",  icon: "🎫", label: "Incidentes" },
   { to: "/admin/reportes",    icon: "📈", label: "Reportes" },
 ];
 
@@ -17,6 +18,7 @@ const AGENT_NAV = [
   { to: "/agente/clientes",    icon: "👥", label: "Clientes / Prospectos" },
   { to: "/agente/alquileres",  icon: "📋", label: "Mis alquileres" },
   { to: "/agente/contactos",   icon: "✉️", label: "Solicitudes / Contactos" },
+  { to: "/agente/incidentes",  icon: "🎫", label: "Reportar incidente" },
   { to: "/agente/perfil",      icon: "👤", label: "Mi perfil" },
 ];
 

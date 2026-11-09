@@ -14,7 +14,7 @@ done
 echo "Tablas en Master:  $($M -e 'SHOW TABLES' 2>/dev/null | wc -l)"
 n_replica=$($R -e 'SHOW TABLES' 2>/dev/null | wc -l)
 echo "Tablas en Replica: $n_replica"
-[ "$n_replica" = "13" ] || { echo "FALLO: se esperaban 13 tablas en la Replica."; exit 1; }
+[ "$n_replica" = "16" ] || { echo "FALLO: se esperaban 16 tablas en la Replica."; exit 1; }
 
 $M -e "INSERT INTO caracteristicas (nombre, categoria) VALUES ('__prueba_replicacion__', 'Interior')" 2>/dev/null
 sleep 2
