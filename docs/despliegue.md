@@ -38,7 +38,8 @@ sin ellas la aplicación no arranca. Ver la lista completa en [seguridad.md](seg
 
 ## Base de datos
 
-1. Crear el esquema con `backend/schema_v1.sql` (13 tablas).
+1. Crear el esquema con `backend/schema_v1.sql` (16 tablas).
+   Si la base ya existía, aplicar `backend/db/migracion_v3_incidentes.sql` (módulo de incidentes).
 2. Si la base ya existía, aplicar `backend/db/migracion_v2_propiedades_version.sql`
    **antes** de desplegar: `ddl-auto=validate` exige la columna `version` de `propiedades`.
 3. Cargar datos de ejemplo con `backend/data.sql` solo en entornos de prueba.
