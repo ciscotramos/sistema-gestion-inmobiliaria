@@ -4,7 +4,7 @@ set -e
 M="mysql -h mysql-master -uroot -p$MASTER_ROOT_PASSWORD"
 R="mysql -h mysql-replica -uroot -p$REPLICA_ROOT_PASSWORD"
 
-estado=$($R -N -e "SHOW REPLICA STATUS\G" 2>/dev/null | grep -c Replica_IO_Running || true)
+estado=$($R -e "SHOW REPLICA STATUS\G" 2>/dev/null | grep -c Replica_IO_Running || true)
 if [ "$estado" -gt 0 ]; then
   echo "La replicación ya estaba configurada."
 else
