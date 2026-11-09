@@ -24,6 +24,8 @@
 -- Roles válidos: 'ADMIN', 'AGENTE'
 -- Contraseña de prueba almacenada como hash BCrypt (Rounds: 10)
 -- -----------------------------------------------------------------------------
+SET NAMES utf8mb4;
+
 INSERT INTO usuarios (id, nombre, email, password_hash, rol, telefono, cargo, foto_url, estado) VALUES
 (1, 'Luis Administrador', 'admin@inmobiliaria.com', '$2a$10$fSoXx0TYvKNsaA9htPcusOkK4m.r/53QaywDaaABoTj66moP9CZxe', 'ADMIN', '+51 999 888 777', 'Administrador General', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', 'Activo'),
 (2, 'Juan Carlos Pérez', 'juan.perez@inmobiliaria.com', '$2a$10$fSoXx0TYvKNsaA9htPcusOkK4m.r/53QaywDaaABoTj66moP9CZxe', 'AGENTE', '+51 987 654 321', 'Asesor Comercial Senior', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', 'Activo'),
