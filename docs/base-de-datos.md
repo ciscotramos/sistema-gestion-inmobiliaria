@@ -35,3 +35,4 @@ que una escritura en el Master aparezca en la Replica y que la Replica rechace e
 - Reiniciar desde cero: `docker compose down -v` (borra los datos).
 - En Render u otra nube se usa una base administrada (MySQL con réplica de lectura) y el esquema se aplica con `schema_v1.sql`; las variables de conexión están en [despliegue.md](despliegue.md).
 - Si ya existía una base creada antes del bloqueo optimista: `backend/db/migracion_v2_propiedades_version.sql`.
+- Si ya existía una base sin el módulo de incidentes: `backend/db/migracion_v3_incidentes.sql`; y para la entidad `asignado_a` y el módulo afectado de los tickets (Taller Sesión 28): `backend/db/migracion_v4_asignado_a_modulo.sql` (se aplica una sola vez, después de V3).

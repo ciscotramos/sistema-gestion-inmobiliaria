@@ -5,10 +5,12 @@ import com.inmobiliaria.backend.dto.TicketResponseDTO;
 import com.inmobiliaria.backend.dto.TicketUpdateDTO;
 import com.inmobiliaria.backend.exception.ResourceNotFoundException;
 import com.inmobiliaria.backend.exception.TicketInvalidoException;
+import com.inmobiliaria.backend.model.EquipoAsignado;
 import com.inmobiliaria.backend.model.EstadoTicket;
 import com.inmobiliaria.backend.model.Prioridad;
 import com.inmobiliaria.backend.model.Ticket;
 import com.inmobiliaria.backend.model.Usuario;
+import com.inmobiliaria.backend.repository.EquipoAsignadoRepository;
 import com.inmobiliaria.backend.repository.EstadoTicketRepository;
 import com.inmobiliaria.backend.repository.PrioridadRepository;
 import com.inmobiliaria.backend.repository.TicketRepository;
@@ -41,6 +43,18 @@ public class TicketService {
             "Solicitudes de modificación",
             "Errores de funcionamiento");
 
+    /** Módulos del sistema que se pueden reportar como afectados (campo 'Módulo afectado' del formulario). */
+    public static final List<String> MODULOS = List.of(
+            "Autenticación y usuarios",
+            "Clientes",
+            "Propiedades",
+            "Alquileres",
+            "Operaciones",
+            "Comisiones",
+            "Reportes y dashboard",
+            "Base de datos e infraestructura",
+            "Otro");
+
     /** Transiciones permitidas del ciclo de vida del ticket. */
     private static final Map<String, Set<String>> TRANSICIONES = Map.of(
             EstadoTicket.ABIERTO, Set.of(EstadoTicket.EN_PROCESO),
@@ -52,17 +66,20 @@ public class TicketService {
     private final PrioridadRepository prioridadRepository;
     private final EstadoTicketRepository estadoRepository;
     private final UsuarioRepository usuarioRepository;
+    private final EquipoAsignadoRepository equipoRepository;
 
     public TicketService(
             TicketRepository ticketRepository,
             PrioridadRepository prioridadRepository,
             EstadoTicketRepository estadoRepository,
-            UsuarioRepository usuarioRepository
+            UsuarioRepository usuarioRepository,
+            EquipoAsignadoRepository equipoRepository
     ) {
         this.ticketRepository = ticketRepository;
         this.prioridadRepository = prioridadRepository;
         this.estadoRepository = estadoRepository;
         this.usuarioRepository = usuarioRepository;
+        this.equipoRepository = equipoRepository;
     }
 
     /**
@@ -93,7 +110,14 @@ public class TicketService {
         if (!TIPOS.contains(dto.getTipo())) {
             throw new TicketInvalidoException("Tipo de incidencia no válido");
         }
-        Prioridad prioridad = prioridadRepository.findByNivel(calcularNivel(dto.getImpacto(), dto.getUrgencia()))
+        if (!MODULOS.contains(dto.getModuloAfectado())) {
+            throw new TicketInvalidoException("Módulo afectado no válido");
+        }
+        // Prioridad elegida por el usuario (P1-P4); si no la envía, se usa la matriz ITIL impacto x urgencia.
+        String nivel = dto.getPrioridad() != null && !dto.getPrioridad().isBlank()
+                ? dto.getPrioridad()
+                : calcularNivel(dto.getImpacto(), dto.getUrgencia());
+        Prioridad prioridad = prioridadRepository.findByNivel(nivel)
                 .orElseThrow(() -> new ResourceNotFoundException("Prioridad no configurada"));
         EstadoTicket abierto = estadoRepository.findByNombre(EstadoTicket.ABIERTO)
                 .orElseThrow(() -> new ResourceNotFoundException("Estado 'Abierto' no configurado"));
@@ -102,6 +126,7 @@ public class TicketService {
         Ticket ticket = new Ticket();
         ticket.setCodigo("TMP-" + UUID.randomUUID().toString().substring(0, 12));
         ticket.setTipo(dto.getTipo());
+        ticket.setModuloAfectado(dto.getModuloAfectado());
         ticket.setTitulo(dto.getTitulo().trim());
         ticket.setDescripcion(dto.getDescripcion().trim());
         ticket.setImpacto(dto.getImpacto());
@@ -146,6 +171,11 @@ public class TicketService {
             }
             ticket.setAsignadoA(asignado);
         }
+        if (dto.getEquipoAsignadoId() != null) {
+            EquipoAsignado equipo = equipoRepository.findById(dto.getEquipoAsignadoId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Equipo de soporte no encontrado"));
+            ticket.setEquipoAsignado(equipo);
+        }
         if (dto.getSolucion() != null && !dto.getSolucion().isBlank()) {
             ticket.setSolucion(dto.getSolucion().trim());
         }
@@ -164,8 +194,8 @@ public class TicketService {
                 && (ticket.getSolucion() == null || ticket.getSolucion().isBlank())) {
             throw new TicketInvalidoException("Para resolver el ticket debe registrar la solución aplicada");
         }
-        if (EstadoTicket.EN_PROCESO.equals(nuevo) && ticket.getAsignadoA() == null) {
-            throw new TicketInvalidoException("Asigne el ticket a un responsable antes de ponerlo en proceso");
+        if (EstadoTicket.EN_PROCESO.equals(nuevo) && ticket.getAsignadoA() == null && ticket.getEquipoAsignado() == null) {
+            throw new TicketInvalidoException("Asigne el ticket a un responsable o a un equipo de soporte antes de ponerlo en proceso");
         }
         ticket.setEstado(estadoRepository.findByNombre(nuevo)
                 .orElseThrow(() -> new ResourceNotFoundException("Estado no configurado: " + nuevo)));
@@ -188,6 +218,10 @@ public class TicketService {
     public Map<String, Object> catalogo() {
         return Map.of(
                 "tipos", TIPOS,
+                "modulos", MODULOS,
+                "equipos", equipoRepository.findAllByOrderByNivelSoporteAsc().stream()
+                        .map(e -> Map.of("id", e.getId(), "nombre", e.getNombre(), "nivel", e.getNivelSoporte()))
+                        .toList(),
                 "impactos", List.of("Alto", "Medio", "Bajo"),
                 "urgencias", List.of("Alta", "Media", "Baja"),
                 "estados", estadoRepository.findAll().stream().map(EstadoTicket::getNombre).toList(),
