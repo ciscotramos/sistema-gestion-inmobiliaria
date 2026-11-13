@@ -15,10 +15,12 @@ export const createTicket = (data) =>
     method: "POST",
     body: {
       tipo: data.tipo,
+      moduloAfectado: data.moduloAfectado,
       titulo: data.titulo,
       descripcion: data.descripcion,
       impacto: data.impacto,
       urgencia: data.urgencia,
+      prioridad: data.prioridad || null,
     },
   });
 
@@ -28,6 +30,7 @@ export const atenderTicket = (id, data) =>
     body: {
       estado: data.estado || null,
       asignadoAId: data.asignadoAId ? Number(data.asignadoAId) : null,
+      equipoAsignadoId: data.equipoAsignadoId ? Number(data.equipoAsignadoId) : null,
       solucion: data.solucion || null,
     },
   });
