@@ -11,14 +11,24 @@ import { getUsuarios } from "../services/usuariosService";
 /**
  * Incidentes — Gestión de incidentes y solicitudes de servicio (ITIL).
  *
- * Cualquier usuario autenticado reporta un incidente; el servidor calcula la prioridad
- * (matriz impacto x urgencia) y el límite SLA. El administrador atiende los tickets:
+ * Cualquier usuario autenticado reporta un incidente indicando el módulo afectado; la prioridad
+ * (P1-P4) se sugiere con la matriz impacto x urgencia y el usuario puede ajustarla. El servidor
+ * calcula el límite SLA y registra la fecha y hora. El administrador atiende los tickets:
  * asigna responsable, cambia el estado (Abierto -> En Proceso -> Resuelto -> Cerrado)
  * y registra la solución. Un agente solo ve los tickets que él reportó.
  */
 const PER_PAGE = 10;
 
-const INITIAL_FORM = { tipo: "", titulo: "", descripcion: "", impacto: "Medio", urgencia: "Media" };
+// prioridad vacía = seguir la prioridad sugerida por impacto x urgencia
+const INITIAL_FORM = {
+  tipo: "", moduloAfectado: "", titulo: "", descripcion: "", impacto: "Medio", urgencia: "Media", prioridad: "",
+};
+
+// Estados que se consideran "activos" en el panel de seguimiento
+const ESTADOS_ACTIVOS = ["Abierto", "En Proceso"];
+
+// Refresco automático del panel (seguimiento casi en tiempo real)
+const REFRESH_MS = 30000;
 
 const NEXT_ESTADOS = {
   Abierto: ["En Proceso"],
@@ -58,6 +68,7 @@ export default function Incidentes() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const [soloActivos, setSoloActivos] = useState(true);
   const [page, setPage] = useState(1);
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -66,11 +77,11 @@ export default function Incidentes() {
   const [saving, setSaving] = useState(false);
 
   const [selected, setSelected] = useState(null);
-  const [atencion, setAtencion] = useState({ estado: "", asignadoAId: "", solucion: "" });
+  const [atencion, setAtencion] = useState({ estado: "", asignadoAId: "", equipoAsignadoId: "", solucion: "" });
   const [atencionError, setAtencionError] = useState("");
 
-  const cargar = useCallback(async () => {
-    setLoading(true);
+  const cargar = useCallback(async (silencioso = false) => {
+    if (!silencioso) setLoading(true);
     setLoadError("");
     try {
       const [lista, cat] = await Promise.all([getTickets(), getCatalogoTickets()]);
@@ -79,11 +90,17 @@ export default function Incidentes() {
     } catch (e) {
       setLoadError(e.message || "No se pudieron cargar los tickets");
     } finally {
-      setLoading(false);
+      if (!silencioso) setLoading(false);
     }
   }, []);
 
   useEffect(() => { cargar(); }, [cargar]);
+
+  // Actualiza el panel cada 30 s sin mostrar "Cargando…" para que el equipo haga seguimiento
+  useEffect(() => {
+    const id = setInterval(() => cargar(true), REFRESH_MS);
+    return () => clearInterval(id);
+  }, [cargar]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -94,11 +111,14 @@ export default function Incidentes() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return tickets.filter((t) =>
-      [t.codigo, t.titulo, t.tipo, t.estado, t.prioridad, t.reportadoPor, t.asignadoA || ""]
-        .join(" ").toLowerCase().includes(q)
-    );
-  }, [tickets, search]);
+    return tickets
+      .filter((t) => !soloActivos || ESTADOS_ACTIVOS.includes(t.estado))
+      .filter((t) =>
+        [t.codigo, t.titulo, t.tipo, t.moduloAfectado, t.estado, t.prioridad, t.reportadoPor,
+          t.asignadoA || "", t.equipoAsignado || ""]
+          .join(" ").toLowerCase().includes(q)
+      );
+  }, [tickets, search, soloActivos]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
   const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
@@ -111,7 +131,11 @@ export default function Incidentes() {
   }, [form.impacto, form.urgencia, catalogo]);
 
   const openCreate = () => {
-    setForm({ ...INITIAL_FORM, tipo: catalogo?.tipos?.[0] || "" });
+    setForm({
+      ...INITIAL_FORM,
+      tipo: catalogo?.tipos?.[0] || "",
+      moduloAfectado: catalogo?.modulos?.[0] || "",
+    });
     setFormError("");
     setCreateOpen(true);
   };
@@ -122,7 +146,7 @@ export default function Incidentes() {
     if (form.descripcion.trim().length < 10) return setFormError("Describa el problema con al menos 10 caracteres");
     setSaving(true);
     try {
-      await createTicket(form);
+      await createTicket({ ...form, prioridad: form.prioridad || prioridadPrevista.nivel });
       setCreateOpen(false);
       setPage(1);
       await cargar();
@@ -135,7 +159,10 @@ export default function Incidentes() {
 
   const openAtender = (t) => {
     setSelected(t);
-    setAtencion({ estado: "", asignadoAId: t.asignadoAId || "", solucion: t.solucion || "" });
+    setAtencion({
+      estado: "", asignadoAId: t.asignadoAId || "", equipoAsignadoId: t.equipoAsignadoId || "",
+      solucion: t.solucion || "",
+    });
     setAtencionError("");
   };
 
@@ -167,6 +194,11 @@ export default function Incidentes() {
               value={search}
               onChange={(v) => { setSearch(v); setPage(1); }}
             />
+            <label style={{ fontSize: "13px", color: "#4b5563", display: "flex", gap: "6px", alignItems: "center" }}>
+              <input type="checkbox" checked={soloActivos}
+                onChange={(e) => { setSoloActivos(e.target.checked); setPage(1); }} />
+              Solo activos
+            </label>
             <button className="btn-admin btn-admin-primary" onClick={openCreate} disabled={!catalogo}>
               + Reportar incidente
             </button>
@@ -180,8 +212,10 @@ export default function Incidentes() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon="🎫"
-            title="No hay tickets"
-            message="Use '+ Reportar incidente' para registrar el primero."
+            title={soloActivos ? "No hay tickets activos" : "No hay tickets"}
+            message={soloActivos
+              ? "Desmarque 'Solo activos' para ver también los resueltos y cerrados, o use '+ Reportar incidente'."
+              : "Use '+ Reportar incidente' para registrar el primero."}
           />
         ) : (
           <>
@@ -189,7 +223,7 @@ export default function Incidentes() {
               <table className="admin-table">
                 <thead>
                   <tr>
-                    {["Código", "Título", "Tipo", "Prioridad", "Estado", "Reportó", "Asignado a", "Límite SLA", "Acciones"]
+                    {["Código", "Título", "Módulo", "Prioridad", "Estado", "Reportó", "Asignado a", "Equipo", "Registrado", "Límite SLA", "Acciones"]
                       .map((c) => <th key={c}>{c}</th>)}
                   </tr>
                 </thead>
@@ -198,7 +232,7 @@ export default function Incidentes() {
                     <tr key={t.id}>
                       <td>{t.codigo}</td>
                       <td title={t.descripcion}>{t.titulo}</td>
-                      <td>{t.tipo}</td>
+                      <td>{t.moduloAfectado}</td>
                       <td>
                         <span className={`status-badge ${prioridadClass[t.prioridad] || ""}`}>
                           {t.prioridad} {t.prioridadNombre}
@@ -209,6 +243,8 @@ export default function Incidentes() {
                       </td>
                       <td>{t.reportadoPor}</td>
                       <td>{t.asignadoA || "Sin asignar"}</td>
+                      <td>{t.equipoAsignado ? `${t.equipoAsignado} (N${t.equipoNivel})` : "—"}</td>
+                      <td>{formatFecha(t.fechaRegistro)}</td>
                       <td style={t.slaVencido ? { color: "#b91c1c", fontWeight: 600 } : undefined}>
                         {formatFecha(t.fechaLimiteSla)}{t.slaVencido ? " ⚠ vencido" : ""}
                       </td>
@@ -259,6 +295,13 @@ export default function Incidentes() {
             </select>
           </div>
           <div className="admin-form-group">
+            <label className="admin-form-label">Módulo afectado *</label>
+            <select className="admin-form-control" value={form.moduloAfectado}
+              onChange={(e) => setForm({ ...form, moduloAfectado: e.target.value })}>
+              {(catalogo?.modulos || []).map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="admin-form-group">
             <label className="admin-form-label">Título *</label>
             <input className="admin-form-control" maxLength={150} placeholder="Ej.: Error 500 al registrar un cliente"
               value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} />
@@ -285,12 +328,29 @@ export default function Incidentes() {
               </select>
             </div>
           </div>
+          <div className="admin-form-group">
+            <label className="admin-form-label">Prioridad *</label>
+            <select className="admin-form-control" value={form.prioridad || prioridadPrevista.nivel}
+              onChange={(e) => setForm({ ...form, prioridad: e.target.value })}>
+              {(catalogo?.prioridades || []).map((p) => (
+                <option key={p.nivel} value={p.nivel}>
+                  {p.nivel} · {p.nombre} (resolución en {p.tiempoSlaHoras} h)
+                </option>
+              ))}
+            </select>
+          </div>
           <p style={{ fontSize: "13px", color: "#4b5563" }}>
-            Prioridad prevista:{" "}
+            Sugerida por impacto × urgencia:{" "}
             <span className={`status-badge ${prioridadClass[prioridadPrevista.nivel]}`}>
               {prioridadPrevista.nivel} {prioridadPrevista.nombre}
             </span>
-            {prioridadPrevista.tiempoSlaHoras ? ` · resolución en ${prioridadPrevista.tiempoSlaHoras} h` : ""}
+            {form.prioridad && form.prioridad !== prioridadPrevista.nivel && (
+              <button type="button" className="btn-admin btn-admin-secondary"
+                style={{ marginLeft: "10px", padding: "2px 8px", fontSize: "12px" }}
+                onClick={() => setForm({ ...form, prioridad: "" })}>
+                Usar la sugerida
+              </button>
+            )}
           </p>
         </div>
       </Modal>
@@ -316,7 +376,7 @@ export default function Incidentes() {
           <div className="admin-form">
             {atencionError && errorBox(atencionError)}
             <p style={{ fontSize: "14px", marginBottom: "8px" }}>
-              <strong>{selected.tipo}</strong> · Impacto {selected.impacto} · Urgencia {selected.urgencia} ·{" "}
+              <strong>{selected.tipo}</strong> · Módulo: {selected.moduloAfectado} · Impacto {selected.impacto} · Urgencia {selected.urgencia} ·{" "}
               {selected.prioridad} {selected.prioridadNombre} ({selected.tiempoSlaHoras} h)
             </p>
             <p style={{ fontSize: "14px", whiteSpace: "pre-wrap", marginBottom: "12px" }}>{selected.descripcion}</p>
@@ -336,6 +396,18 @@ export default function Incidentes() {
                     </select>
                   </div>
                   <div className="admin-form-group">
+                    <label className="admin-form-label">Equipo de soporte</label>
+                    <select className="admin-form-control" value={atencion.equipoAsignadoId}
+                      onChange={(e) => setAtencion({ ...atencion, equipoAsignadoId: e.target.value })}>
+                      <option value="">Sin equipo</option>
+                      {(catalogo?.equipos || []).map((e) => (
+                        <option key={e.id} value={e.id}>{e.nombre} (Nivel {e.nivel})</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-group">
                     <label className="admin-form-label">Cambiar estado a</label>
                     <select className="admin-form-control" value={atencion.estado}
                       onChange={(e) => setAtencion({ ...atencion, estado: e.target.value })}>
@@ -352,7 +424,8 @@ export default function Incidentes() {
               </>
             ) : (
               <>
-                <p style={{ fontSize: "14px" }}><strong>Responsable:</strong> {selected.asignadoA || "Sin asignar"}</p>
+                <p style={{ fontSize: "14px" }}><strong>Responsable:</strong> {selected.asignadoA || "Sin asignar"}
+                  {selected.equipoAsignado ? ` · Equipo: ${selected.equipoAsignado} (Nivel ${selected.equipoNivel})` : ""}</p>
                 {selected.solucion && (
                   <p style={{ fontSize: "14px", marginTop: "8px" }}><strong>Solución:</strong> {selected.solucion}</p>
                 )}

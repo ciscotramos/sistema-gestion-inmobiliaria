@@ -404,6 +404,26 @@ INSERT INTO estados_ticket (id, nombre) VALUES
     (4, 'Cerrado');
 
 -- -----------------------------------------------------------------------------
+-- 17. TABLA: asignado_a (catálogo de equipos de soporte)
+-- Propósito: Equipo / nivel de soporte responsable de un ticket (Help Desk N1, Especialista DB N2, Desarrollo N3)
+-- Se crea antes de 'tickets' porque esta le referencia con una FK.
+-- -----------------------------------------------------------------------------
+DROP TABLE IF EXISTS asignado_a;
+CREATE TABLE asignado_a (
+    id INT NOT NULL AUTO_INCREMENT,
+    nombre VARCHAR(60) NOT NULL,
+    nivel_soporte TINYINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_asignado_a_nombre (nombre),
+    CONSTRAINT chk_asignado_a_nivel CHECK (nivel_soporte BETWEEN 1 AND 3)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO asignado_a (id, nombre, nivel_soporte) VALUES
+    (1, 'Help Desk', 1),
+    (2, 'Especialista DB', 2),
+    (3, 'Equipo de Desarrollo', 3);
+
+-- -----------------------------------------------------------------------------
 -- 16. TABLA: tickets
 -- Propósito: Incidentes y solicitudes de servicio reportados por los usuarios
 -- -----------------------------------------------------------------------------
@@ -412,6 +432,7 @@ CREATE TABLE tickets (
     id INT NOT NULL AUTO_INCREMENT,
     codigo VARCHAR(20) NOT NULL,
     tipo VARCHAR(60) NOT NULL,
+    modulo_afectado VARCHAR(60) NOT NULL DEFAULT 'Otro',
     titulo VARCHAR(150) NOT NULL,
     descripcion TEXT NOT NULL,
     impacto VARCHAR(10) NOT NULL,
@@ -420,6 +441,7 @@ CREATE TABLE tickets (
     estado_id INT NOT NULL DEFAULT 1,
     reportado_por INT NOT NULL,
     asignado_a INT NULL,
+    equipo_asignado_id INT NULL,
     solucion TEXT NULL,
     fecha_registro DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     fecha_limite_sla DATETIME NOT NULL,
@@ -430,6 +452,7 @@ CREATE TABLE tickets (
     KEY idx_tickets_prioridad (prioridad_id),
     KEY idx_tickets_reportado_por (reportado_por),
     KEY idx_tickets_asignado_a (asignado_a),
+    KEY idx_tickets_equipo_asignado (equipo_asignado_id),
     CONSTRAINT fk_tickets_prioridad FOREIGN KEY (prioridad_id)
         REFERENCES prioridades(id) ON DELETE RESTRICT,
     CONSTRAINT fk_tickets_estado FOREIGN KEY (estado_id)
@@ -438,6 +461,8 @@ CREATE TABLE tickets (
         REFERENCES usuarios(id) ON DELETE RESTRICT,
     CONSTRAINT fk_tickets_asignado_a FOREIGN KEY (asignado_a)
         REFERENCES usuarios(id) ON DELETE SET NULL,
+    CONSTRAINT fk_tickets_equipo_asignado FOREIGN KEY (equipo_asignado_id)
+        REFERENCES asignado_a(id) ON DELETE SET NULL,
     CONSTRAINT chk_tickets_impacto CHECK (impacto IN ('Alto', 'Medio', 'Bajo')),
     CONSTRAINT chk_tickets_urgencia CHECK (urgencia IN ('Alta', 'Media', 'Baja'))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

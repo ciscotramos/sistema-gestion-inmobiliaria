@@ -34,7 +34,7 @@ cd backend && mvn spring-boot:run
 cd front && npm ci && npm run dev
 ```
 
-La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar `backend/db/migracion_v2_propiedades_version.sql`.
+La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar en orden las migraciones de `backend/db/` (V2, V3 y V4).
 
 ## Proceso de trabajo
 
