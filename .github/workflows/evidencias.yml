@@ -85,7 +85,7 @@ jobs:
           cd .. && pip install --quiet playwright
           python3 -m playwright install --with-deps chromium > /dev/null
           python3 scripts/evidencias/capturas.py evidencias
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: evidencias-sesion27
