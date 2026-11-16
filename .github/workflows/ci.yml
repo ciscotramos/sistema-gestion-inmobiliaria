@@ -64,4 +64,6 @@ jobs:
           ./scripts/prueba-incidentes.sh
       - name: Registros si falla
         if: failure()
-        run: docker compose logs --tail=80
+        run: |
+          docker compose --profile app logs --tail=150 backend
+          docker compose logs --tail=30 mysql-master mysql-replica
