@@ -3,7 +3,7 @@
 -- ARCHIVO: schema_v1.sql
 -- MOTOR: MySQL 8.0+ (InnoDB, utf8mb4)
 -- NORMALIZACIÓN: 3FN (Tercera Forma Normal)
--- TOTAL TABLAS: 16
+-- TOTAL TABLAS: 17
 -- =============================================================================
 
 SET NAMES utf8mb4;
@@ -404,7 +404,7 @@ INSERT INTO estados_ticket (id, nombre) VALUES
     (4, 'Cerrado');
 
 -- -----------------------------------------------------------------------------
--- 17. TABLA: asignado_a (catálogo de equipos de soporte)
+-- 16. TABLA: asignado_a (catálogo de equipos de soporte)
 -- Propósito: Equipo / nivel de soporte responsable de un ticket (Help Desk N1, Especialista DB N2, Desarrollo N3)
 -- Se crea antes de 'tickets' porque esta le referencia con una FK.
 -- -----------------------------------------------------------------------------
@@ -424,7 +424,7 @@ INSERT INTO asignado_a (id, nombre, nivel_soporte) VALUES
     (3, 'Equipo de Desarrollo', 3);
 
 -- -----------------------------------------------------------------------------
--- 16. TABLA: tickets
+-- 17. TABLA: tickets
 -- Propósito: Incidentes y solicitudes de servicio reportados por los usuarios
 -- -----------------------------------------------------------------------------
 DROP TABLE IF EXISTS tickets;
