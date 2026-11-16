@@ -1,6 +1,8 @@
 package com.inmobiliaria.backend.model;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /** Equipo de soporte responsable de un ticket: Help Desk (N1), Especialista DB (N2), Desarrollo (N3). Tabla 'asignado_a'. */
 @Entity
@@ -14,6 +16,8 @@ public class EquipoAsignado {
     @Column(nullable = false, unique = true, length = 60)
     private String nombre;
 
+    // La columna es TINYINT: con ddl-auto=validate el tipo JDBC declarado debe coincidir con el de la tabla.
+    @JdbcTypeCode(SqlTypes.TINYINT)
     @Column(name = "nivel_soporte", nullable = false)
     private Integer nivelSoporte;
 
