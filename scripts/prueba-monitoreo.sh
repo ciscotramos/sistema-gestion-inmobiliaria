@@ -41,8 +41,8 @@ for m in jvm_memory_used_bytes process_cpu_usage http_server_requests_seconds_co
   grep -q "^$m" <<<"$METRICAS" || fallo "falta la métrica $m en /actuator/prometheus"
 done
 echo "OK: /actuator/prometheus con token -> 200 y métricas reales. Muestra:"
-for m in process_cpu_usage 'jvm_memory_used_bytes{application="inmobiliaria-backend",area="heap"' 'hikaricp_connections_max' 'http_server_requests_seconds_count'; do
-  grep -F "$m" <<<"$METRICAS" | head -2
+for m in 'process_cpu_usage' 'jvm_memory_used_bytes{application="inmobiliaria-backend",area="heap"' 'hikaricp_connections_max' 'http_server_requests_seconds_count{.*uri="/api/public/status"'; do
+  grep -E "^$m" <<<"$METRICAS" | head -2
 done
 
 echo "== Ficha 02: Prometheus, reglas y Alertmanager ($(hora)) =="
