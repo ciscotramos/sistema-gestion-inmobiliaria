@@ -38,10 +38,12 @@ echo "OK: /actuator/env no está expuesto"
 curl -s "$BASE/api/public/status" >/dev/null
 METRICAS=$(curl -s -H "$TOK" "$BASE/actuator/prometheus")
 for m in jvm_memory_used_bytes process_cpu_usage http_server_requests_seconds_count http_server_requests_seconds_bucket hikaricp_connections_active; do
-  echo "$METRICAS" | grep -q "^$m" || fallo "falta la métrica $m en /actuator/prometheus"
+  grep -q "^$m" <<<"$METRICAS" || fallo "falta la métrica $m en /actuator/prometheus"
 done
 echo "OK: /actuator/prometheus con token -> 200 y métricas reales. Muestra:"
-echo "$METRICAS" | grep -E '^(process_cpu_usage|jvm_memory_used_bytes\{area="heap"|http_server_requests_seconds_count|hikaricp_connections_(active|max))' | head -8
+for m in process_cpu_usage 'jvm_memory_used_bytes{application="inmobiliaria-backend",area="heap"' 'hikaricp_connections_max' 'http_server_requests_seconds_count'; do
+  grep -F "$m" <<<"$METRICAS" | head -2
+done
 
 echo "== Ficha 02: Prometheus, reglas y Alertmanager ($(hora)) =="
 docker run --rm --entrypoint promtool -v "$PWD/monitoring:/etc/prometheus:ro" -v "$PWD/monitoring/secrets:/etc/prometheus/secrets:ro" \
@@ -75,12 +77,6 @@ DASH=$(curl -s -u "admin:$GF_PASS" "$GRAFANA/api/dashboards/uid/inmobiliaria-obs
 [ "$(echo "$DASH" | jq '.dashboard.panels | length')" -ge 5 ] || fallo "dashboard no aprovisionado"
 echo "OK: dashboard '$(echo "$DASH" | jq -r .dashboard.title)' con $(echo "$DASH" | jq '.dashboard.panels | length') paneles, refresco $(echo "$DASH" | jq -r .dashboard.refresh):"
 echo "$DASH" | jq -r '.dashboard.panels[] | "  [\(.type)] \(.title)"'
-echo "Comprobando que cada consulta del tablero devuelve datos reales..."
-echo "$DASH" | jq -r '.dashboard.panels[] | select(.type!="table") | .targets[0].expr' | while read -r EXPR; do
-  N=$(curl -s -G "$PROM/api/v1/query" --data-urlencode "query=$EXPR" | jq '.data.result | length')
-  echo "  series=$N  $EXPR" | cut -c1-150
-done
-
 echo "== Ficha 04: incidente simulado ($(hora)) =="
 [ "$(codigo -X POST -H "$TOK" "$BASE/api/monitoreo/simular?tipo=error500")" = "500" ] || fallo "el simulador debía responder 500 (¿MONITORING_SIMULATION=true?)"
 [ "$(codigo -X POST "$BASE/api/monitoreo/simular?tipo=error500")" = "401" ] || fallo "el simulador sin token debía dar 401"
@@ -114,6 +110,12 @@ done
 echo "[$(hora)] OK: alerta TasaErroresCritica5xx en FIRING (activa desde $FIRING, tardó $(( $(date +%s) - INICIO )) s desde el primer error)"
 curl -s "$PROM/api/v1/alerts" | jq -r '.data.alerts[] | "  \(.labels.alertname) [\(.state)] severity=\(.labels.severity) priority=\(.labels.priority) valor=\(.value)"'
 
+echo "[$(hora)] Ficha 03: con tráfico real, cada consulta del tablero de Grafana debe devolver datos:"
+curl -s -u "admin:$GF_PASS" "$GRAFANA/api/dashboards/uid/inmobiliaria-observabilidad" | jq -r '.dashboard.panels[] | select(.type!="table") | .targets[0].expr' | while read -r EXPR; do
+  N=$(curl -s -G "$PROM/api/v1/query" --data-urlencode "query=$EXPR" | jq '.data.result | length')
+  echo "  series=$N  $EXPR" | cut -c1-150
+  [ "$N" -ge 1 ] || { echo "FALLO: la consulta del tablero no devuelve datos"; exit 1; }
+done
 echo "Esperando a que Alertmanager notifique y el backend cree el ticket..."
 TICKET=""
 for i in $(seq 1 40); do
@@ -146,5 +148,19 @@ for i in $(seq 1 120); do
   [ "$ACTIVA" = "0" ] && break; sleep 3
 done
 [ "$ACTIVA" = "0" ] || fallo "la alerta no volvió a estado normal tras detener los errores"
-echo "[$(hora)] OK: alerta recuperada (ya no figura en /api/v1/alerts). Resolved enviado a Alertmanager."
+echo "[$(hora)] OK: alerta recuperada (ya no figura en /api/v1/alerts)."
+echo "Esperando a que Alertmanager entregue el aviso de recuperación (Resolved) al webhook..."
+ENVIOS=0
+for i in $(seq 1 50); do
+  ENVIOS=$(curl -s "$AM/metrics" | grep '^alertmanager_notifications_total{integration="webhook"' | awk '{print int($2)}' | head -1)
+  [ "${ENVIOS:-0}" -ge 2 ] && break; sleep 3
+done
+FALLIDOS=$(curl -s "$AM/metrics" | grep '^alertmanager_notifications_failed_total{integration="webhook"' | awk '{print int($2)}' | head -1)
+echo "[$(hora)] Alertmanager: notificaciones webhook enviadas=${ENVIOS:-0}, fallidas=${FALLIDOS:-0}"
+[ "${ENVIOS:-0}" -ge 2 ] || fallo "Alertmanager no envió el aviso de recuperación (se esperaban >= 2 notificaciones: firing y resolved)"
+[ "${FALLIDOS:-0}" = "0" ] || fallo "hubo notificaciones webhook fallidas"
+echo "OK: aviso de FIRING y de RESOLVED entregados al backend sin fallos."
+TOTAL=$(curl -s -H "$TOK" "$BASE/actuator/prometheus" | grep '^inmobiliaria_tickets_por_alerta_total' | awk '{print $2}')
+echo "Métrica propia del backend: inmobiliaria_tickets_por_alerta_total = $TOTAL"
+[ "${TOTAL%.*}" = "1" ] || fallo "se esperaba 1 ticket creado por alerta en la métrica y hay '$TOTAL'"
 echo "Resumen: métricas OK, target UP, reglas OK, Grafana OK, alerta FIRING -> ticket P1 -> recuperada."
