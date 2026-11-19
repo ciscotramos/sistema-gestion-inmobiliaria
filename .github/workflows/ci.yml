@@ -52,6 +52,8 @@ jobs:
           JWT_SECRET=ci-jwt-$(openssl rand -hex 24)
           APP_ADMIN_EMAIL=admin-ci@ejemplo.com
           APP_ADMIN_PASSWORD=Ci-$(openssl rand -hex 8)
+          MONITORING_TOKEN=ci-mon-$(openssl rand -hex 16)
+          MONITORING_SIMULATION=true
           EOF
           docker compose up -d --wait mysql-master mysql-replica
           docker compose up replica-init --exit-code-from replica-init
@@ -62,8 +64,21 @@ jobs:
           docker compose --profile app up -d --build backend
           set -a; source .env; set +a
           ./scripts/prueba-incidentes.sh
+      - name: Monitoreo y alertas (Prometheus, Alertmanager, Grafana)
+        run: |
+          set -a; source .env; set +a
+          set -o pipefail
+          ./scripts/prueba-monitoreo.sh 2>&1 | tee evidencia-monitoreo.log
+      - name: Guardar la evidencia del monitoreo
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-monitoreo
+          path: evidencia-monitoreo.log
+          if-no-files-found: ignore
       - name: Registros si falla
         if: failure()
         run: |
           docker compose --profile app logs --tail=150 backend
           docker compose logs --tail=30 mysql-master mysql-replica
+          docker compose -f docker-compose.monitoring.yml logs --tail=60 prometheus alertmanager grafana
