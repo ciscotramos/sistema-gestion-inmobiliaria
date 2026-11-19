@@ -18,6 +18,9 @@ public class Ticket {
     @Column(nullable = false, length = 60)
     private String tipo;
 
+    @Column(name = "modulo_afectado", nullable = false, length = 60)
+    private String moduloAfectado;
+
     @Column(nullable = false, length = 150)
     private String titulo;
 
@@ -46,6 +49,10 @@ public class Ticket {
     @JoinColumn(name = "asignado_a")
     private Usuario asignadoA;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "equipo_asignado_id")
+    private EquipoAsignado equipoAsignado;
+
     @Column(columnDefinition = "TEXT")
     private String solucion;
 
@@ -66,6 +73,8 @@ public class Ticket {
     public void setCodigo(String codigo) { this.codigo = codigo; }
     public String getTipo() { return tipo; }
     public void setTipo(String tipo) { this.tipo = tipo; }
+    public String getModuloAfectado() { return moduloAfectado; }
+    public void setModuloAfectado(String moduloAfectado) { this.moduloAfectado = moduloAfectado; }
     public String getTitulo() { return titulo; }
     public void setTitulo(String titulo) { this.titulo = titulo; }
     public String getDescripcion() { return descripcion; }
@@ -82,6 +91,8 @@ public class Ticket {
     public void setReportadoPor(Usuario reportadoPor) { this.reportadoPor = reportadoPor; }
     public Usuario getAsignadoA() { return asignadoA; }
     public void setAsignadoA(Usuario asignadoA) { this.asignadoA = asignadoA; }
+    public EquipoAsignado getEquipoAsignado() { return equipoAsignado; }
+    public void setEquipoAsignado(EquipoAsignado equipoAsignado) { this.equipoAsignado = equipoAsignado; }
     public String getSolucion() { return solucion; }
     public void setSolucion(String solucion) { this.solucion = solucion; }
     public LocalDateTime getFechaRegistro() { return fechaRegistro; }
