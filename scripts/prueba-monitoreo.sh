@@ -59,6 +59,10 @@ done
 [ "$UP" = "1" ] || { curl -s "$PROM/api/v1/targets" | jq '.data.activeTargets[] | {job: .labels.job, health, lastError}'; fallo "el target inmobiliaria_api no está UP"; }
 echo "OK: target inmobiliaria_api en estado UP"
 curl -s "$PROM/api/v1/targets" | jq -r '.data.activeTargets[] | "  target \(.labels.job) -> \(.scrapeUrl) [\(.health)] intervalo \(.scrapeInterval)"'
+echo "Esperando a que Prometheus evalúe todas las reglas por primera vez..."
+for i in $(seq 1 30); do
+  [ "$(curl -s "$PROM/api/v1/rules" | jq '[.data.groups[].rules[] | select(.health=="unknown")] | length')" = "0" ] && break; sleep 3
+done
 REGLAS=$(curl -s "$PROM/api/v1/rules" | jq -r '[.data.groups[].rules[] | select(.type=="alerting")] | length')
 [ "$REGLAS" -ge 6 ] || fallo "se esperaban 6 reglas de alerta cargadas y hay $REGLAS"
 echo "OK: $REGLAS reglas de alerta cargadas:"
