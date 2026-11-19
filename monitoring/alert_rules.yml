@@ -1,0 +1,89 @@
+# Reglas de alerta (Taller Sesión 30, Ficha 02). Cada regla usa una ventana sostenida ("for") para
+# evitar la fatiga de alertas: un pico de un segundo no despierta a nadie, un problema de minutos sí.
+# Nombres de métricas de Spring Boot/Micrometer (http_server_requests_seconds_*), no los de Node.js.
+groups:
+  - name: alertas_criticas_inmobiliaria
+    rules:
+      # Señal "Errores": porcentaje de respuestas 5xx sobre el total (la ficha usaba una tasa absoluta).
+      # Se ignora /actuator (los propios scrapes) y se exige un mínimo de tráfico para no alertar con 1 petición.
+      - alert: TasaErroresCritica5xx
+        expr: |
+          (
+            sum(rate(http_server_requests_seconds_count{status=~"5..", uri!~"/actuator.*"}[1m]))
+            /
+            sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[1m]))
+          ) > 0.05
+          and
+          sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[1m])) > 0.1
+        for: 1m   # laboratorio: 1 minuto. En producción usar 5m.
+        labels:
+          severity: critical
+          priority: P1
+        annotations:
+          summary: "Más del 5% de las respuestas de la API son errores 5xx"
+          description: "La tasa de errores HTTP 5xx supera el 5% de forma sostenida. Revisar los logs del backend y el estado de MySQL."
+
+      # Disponibilidad: el backend dejó de responder al scrape (señal "Tráfico/Disponibilidad").
+      - alert: ApiCaida
+        expr: up{job="inmobiliaria_api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          priority: P1
+        annotations:
+          summary: "El backend de la inmobiliaria no responde"
+          description: "Prometheus no puede leer /actuator/prometheus del backend desde hace más de 1 minuto (up == 0)."
+
+  - name: alertas_degradacion_inmobiliaria
+    rules:
+      # Señal "Latencia": siempre percentil (p95), nunca promedio.
+      - alert: LatenciaP95Alta
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m]))
+          ) > 1
+        for: 2m
+        labels:
+          severity: warning
+          priority: P3
+        annotations:
+          summary: "El 5% de las peticiones más lentas tarda más de 1 segundo"
+          description: "El percentil 95 de la latencia HTTP supera 1 s durante más de 2 minutos."
+
+      # Señal "Saturación": CPU del proceso Java.
+      - alert: CpuAlta
+        expr: process_cpu_usage{job="inmobiliaria_api"} > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          priority: P3
+        annotations:
+          summary: "El backend usa más del 85% de CPU"
+          description: "La CPU del proceso Java supera el 85% desde hace más de 5 minutos."
+
+      # Señal "Saturación": pool de conexiones a MySQL (HikariCP) casi agotado.
+      - alert: PoolBaseDatosSaturado
+        expr: |
+          max by (pool) (hikaricp_connections_active{job="inmobiliaria_api"})
+          / max by (pool) (hikaricp_connections_max{job="inmobiliaria_api"}) > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          priority: P2
+          modulo: "Base de datos e infraestructura"
+        annotations:
+          summary: "El pool de conexiones a MySQL supera el 80%"
+          description: "Casi todas las conexiones del pool están ocupadas; las nuevas peticiones empezarán a esperar."
+
+      # Señal "Saturación": memoria heap de la JVM.
+      - alert: MemoriaHeapAlta
+        expr: |
+          sum(jvm_memory_used_bytes{job="inmobiliaria_api", area="heap"})
+          / sum(jvm_memory_max_bytes{job="inmobiliaria_api", area="heap"}) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          priority: P3
+        annotations:
+          summary: "La memoria heap de la JVM supera el 90%"
+          description: "El heap lleva más de 5 minutos por encima del 90% del máximo configurado."
