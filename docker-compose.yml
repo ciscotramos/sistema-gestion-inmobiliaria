@@ -95,6 +95,9 @@ services:
       APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
       APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
       DB_SSL_MODE: DISABLED
+      # Monitoreo (Sesión 30): token de Prometheus/Alertmanager y simulador de incidentes (solo laboratorio)
+      MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+      MONITORING_SIMULATION: ${MONITORING_SIMULATION:-false}
     ports:
       - "127.0.0.1:8080:8080"
 

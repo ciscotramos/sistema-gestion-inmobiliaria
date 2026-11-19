@@ -41,3 +41,4 @@ backend/backup_*.sql
 
 # Secretos locales
 .env
+monitoring/secrets/
