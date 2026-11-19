@@ -1,5 +1,6 @@
 package com.inmobiliaria.backend.config;
 
+import com.inmobiliaria.backend.monitoring.MonitoringTokenFilter;
 import com.inmobiliaria.backend.repository.UsuarioRepository;
 import com.inmobiliaria.backend.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
@@ -42,6 +43,10 @@ public class SecurityConfig {
     /** Orígenes permitidos por CORS, separados por coma. En producción: solo el dominio del frontend. */
     @Value("${app.cors.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
     private List<String> allowedOrigins;
+
+    /** Token Bearer de Prometheus/Alertmanager. Vacío: las rutas de monitoreo quedan cerradas. */
+    @Value("${app.monitoring.token:}")
+    private String monitoringToken;
 
     public SecurityConfig(UsuarioRepository usuarioRepository) {
         this.usuarioRepository = usuarioRepository;
@@ -111,6 +116,9 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        // Monitoreo: la salud es pública; métricas y alertas las valida MonitoringTokenFilter
+                        .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/actuator/prometheus", "/api/monitoreo/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/distritos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/caracteristicas/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/propiedades/**").permitAll()
@@ -150,6 +158,7 @@ public class SecurityConfig {
                         })
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(new MonitoringTokenFilter(monitoringToken), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

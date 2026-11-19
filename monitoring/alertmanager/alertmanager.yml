@@ -1,0 +1,18 @@
+# Alertmanager (Taller Sesión 30, Ficha 04): agrupa, deduplica y enruta las alertas de Prometheus.
+# Receptor por defecto: el backend de la inmobiliaria, que convierte la alerta en un ticket del módulo de incidentes.
+route:
+  receiver: ticket-incidentes
+  group_by: ['alertname']
+  group_wait: 10s        # espera para agrupar alertas que saltan casi a la vez
+  group_interval: 1m
+  repeat_interval: 4h    # no repetir la misma alerta más de una vez cada 4 h
+
+receivers:
+  - name: ticket-incidentes
+    webhook_configs:
+      - url: http://inmobiliaria-backend:8080/api/monitoreo/alertas
+        send_resolved: true    # avisa también cuando el problema se recupera (Resolved)
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /secrets/monitoring_token
