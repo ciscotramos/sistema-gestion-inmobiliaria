@@ -271,7 +271,7 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "4. Errores · porcentaje de respuestas 5xx",
+      "title": "Señal extra · Errores: porcentaje de respuestas 5xx",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -333,7 +333,7 @@
     {
       "id": 6,
       "type": "state-timeline",
-      "title": "5. Estado del servicio (up) · 1 = UP, 0 = DOWN",
+      "title": "4. Estado del servicio (up) · 1 = UP, 0 = DOWN",
       "gridPos": {
         "h": 6,
         "w": 12,
@@ -406,7 +406,7 @@
     {
       "id": 7,
       "type": "table",
-      "title": "5b. Alertas activas (Prometheus)",
+      "title": "4b. Alertas activas (Prometheus)",
       "gridPos": {
         "h": 6,
         "w": 12,
