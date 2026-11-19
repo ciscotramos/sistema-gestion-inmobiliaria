@@ -4,10 +4,12 @@ import com.inmobiliaria.backend.dto.TicketCreateDTO;
 import com.inmobiliaria.backend.dto.TicketResponseDTO;
 import com.inmobiliaria.backend.dto.TicketUpdateDTO;
 import com.inmobiliaria.backend.exception.TicketInvalidoException;
+import com.inmobiliaria.backend.model.EquipoAsignado;
 import com.inmobiliaria.backend.model.EstadoTicket;
 import com.inmobiliaria.backend.model.Prioridad;
 import com.inmobiliaria.backend.model.Ticket;
 import com.inmobiliaria.backend.model.Usuario;
+import com.inmobiliaria.backend.repository.EquipoAsignadoRepository;
 import com.inmobiliaria.backend.repository.EstadoTicketRepository;
 import com.inmobiliaria.backend.repository.PrioridadRepository;
 import com.inmobiliaria.backend.repository.TicketRepository;
@@ -39,6 +41,7 @@ class TicketServiceUnitTest {
     @Mock private PrioridadRepository prioridadRepository;
     @Mock private EstadoTicketRepository estadoRepository;
     @Mock private UsuarioRepository usuarioRepository;
+    @Mock private EquipoAsignadoRepository equipoRepository;
 
     private TicketService service;
     private Usuario agente;
@@ -46,7 +49,7 @@ class TicketServiceUnitTest {
 
     @BeforeEach
     void setUp() {
-        service = new TicketService(ticketRepository, prioridadRepository, estadoRepository, usuarioRepository);
+        service = new TicketService(ticketRepository, prioridadRepository, estadoRepository, usuarioRepository, equipoRepository);
         agente = usuario(2, "AGENTE");
         admin = usuario(1, "ADMIN");
         when(prioridadRepository.findByNivel("P1")).thenReturn(Optional.of(prioridad("P1", "Crítico", 2)));
@@ -90,6 +93,7 @@ class TicketServiceUnitTest {
     private static TicketCreateDTO dto(String impacto, String urgencia) {
         TicketCreateDTO d = new TicketCreateDTO();
         d.setTipo("Errores de funcionamiento");
+        d.setModuloAfectado("Clientes");
         d.setTitulo("Error 500 al registrar cliente");
         d.setDescripcion("Al guardar un cliente nuevo la API responde 500.");
         d.setImpacto(impacto);
@@ -145,6 +149,63 @@ class TicketServiceUnitTest {
         TicketCreateDTO d = dto("Alto", "Alta");
         d.setTipo("Tipo inventado");
         assertThrows(TicketInvalidoException.class, () -> service.registrar(d, agente));
+    }
+
+    @Test
+    void registrar_guardaElModuloAfectado() {
+        TicketResponseDTO r = service.registrar(dto("Alto", "Alta"), agente);
+        assertEquals("Clientes", r.getModuloAfectado());
+    }
+
+    @Test
+    void registrar_rechazaUnModuloQueNoEstaEnElCatalogo() {
+        TicketCreateDTO d = dto("Alto", "Alta");
+        d.setModuloAfectado("Modulo inventado");
+        assertThrows(TicketInvalidoException.class, () -> service.registrar(d, agente));
+    }
+
+    @Test
+    void registrar_respetaLaPrioridadElegidaPorElUsuario() {
+        TicketCreateDTO d = dto("Bajo", "Baja"); // la matriz daría P4
+        d.setPrioridad("P1");
+        TicketResponseDTO r = service.registrar(d, agente);
+
+        assertEquals("P1", r.getPrioridad());
+        assertEquals(Duration.ofHours(2), Duration.between(r.getFechaRegistro(), r.getFechaLimiteSla()));
+    }
+
+    @Test
+    void registrar_sinPrioridadElegidaUsaLaMatrizItil() {
+        TicketResponseDTO r = service.registrar(dto("Bajo", "Baja"), agente);
+        assertEquals("P4", r.getPrioridad());
+    }
+
+    @Test
+    void atender_asignarUnEquipoPermitePonerEnProceso() {
+        ticketAbierto();
+        EquipoAsignado dba = new EquipoAsignado();
+        dba.setId(2);
+        dba.setNombre("Especialista DB");
+        dba.setNivelSoporte(2);
+        when(equipoRepository.findById(2)).thenReturn(Optional.of(dba));
+
+        TicketUpdateDTO u = new TicketUpdateDTO();
+        u.setEquipoAsignadoId(2);
+        u.setEstado("En Proceso");
+        TicketResponseDTO r = service.atender(7, u);
+
+        assertEquals("En Proceso", r.getEstado());
+        assertEquals("Especialista DB", r.getEquipoAsignado());
+        assertEquals(2, r.getEquipoNivel());
+    }
+
+    @Test
+    void atender_equipoInexistenteDaNoEncontrado() {
+        ticketAbierto();
+        when(equipoRepository.findById(99)).thenReturn(Optional.empty());
+        TicketUpdateDTO u = new TicketUpdateDTO();
+        u.setEquipoAsignadoId(99);
+        assertThrows(com.inmobiliaria.backend.exception.ResourceNotFoundException.class, () -> service.atender(7, u));
     }
 
     @Test
