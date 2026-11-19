@@ -44,6 +44,7 @@ La base se crea con `backend/schema_v1.sql`. Si ya existía, aplicar en orden la
 - [Despliegue](docs/despliegue.md)
 - [Base de datos (Master/Replica)](docs/base-de-datos.md)
 - [Gestión de incidentes (tickets)](docs/incidentes.md)
+- [Monitoreo y gestión de eventos (Prometheus, Grafana, Alertmanager)](docs/monitoreo.md)
 - [Seguridad](docs/seguridad.md) y [política de seguridad](SECURITY.md)
 
 ## Alcance y pendientes
