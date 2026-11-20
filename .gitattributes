@@ -1,0 +1,4 @@
+# Los scripts y la configuración de MySQL deben conservar finales de línea LF (en Windows, CRLF rompe bash en Docker).
+*.sh text eol=lf
+*.cnf text eol=lf
+*.sql text eol=lf
