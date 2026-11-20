@@ -1,2 +1,3 @@
 # Falso positivo: cabecera de prueba "Bearer token-falso" del script de monitoreo (ya reemplazada por un valor aleatorio)
 5dd25872063a54540cb436a91e4ea6b9428b2fc7:scripts/prueba-monitoreo.sh:curl-auth-header:30
+cdc55bce1a99d8691447d72f3ced1aeea6eec2be:scripts/prueba-monitoreo.sh:curl-auth-header:30
