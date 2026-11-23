@@ -8,8 +8,7 @@ cd "$(dirname "$0")/.."
 source scripts/lib-respaldo.sh
 
 rotar_dir() { # conserva los $2 más recientes de $1 (el nombre lleva la fecha UTC) y borra el resto
-  ls -1 "$1"/*.sql.gz 2>/dev/null | sort -r | tail -n +$(($2 + 1)) | while read -r f; do rm -f "$f" "$f.sha256" "$f.meta"; done
-  return 0
+  { ls -1 "$1"/*.sql.gz 2>/dev/null | sort -r | tail -n +$(($2 + 1)) | while read -r f; do rm -f "$f" "$f.sha256" "$f.meta"; done; } || true
 }
 
 completo() {
