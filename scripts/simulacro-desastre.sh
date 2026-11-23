@@ -29,6 +29,7 @@ echo "Punto previo al desastre: $hasta_archivo:$hasta_pos"
 echo "Características antes del desastre: $(M -e 'SELECT COUNT(*) FROM caracteristicas')"
 
 paso "4. DESASTRE: alguien (o un ransomware) borra todo el catálogo de características"
+t0=$(date +%s)
 M -e "SET FOREIGN_KEY_CHECKS=0; DELETE FROM caracteristicas;"
 echo "Master:  $(M -e 'SELECT COUNT(*) FROM caracteristicas') características"
 
@@ -41,11 +42,10 @@ echo "Replica: $n_replica características"
 paso "6. Respaldo incremental: se conservan los binlogs (con el daño incluido) para reaplicarlos hasta antes de él"
 ./scripts/respaldar.sh incremental
 
-paso "7. Restauración: Full + binlogs hasta el punto previo, en un servidor nuevo"
-inicio=$(date +%s)
-CONTEOS_ESPERADOS="$T/antes_del_desastre.txt" HASTA_ARCHIVO="$hasta_archivo" HASTA_POS="$hasta_pos" \
+paso "7. Restauración: Full + binlogs hasta el punto previo, en un servidor nuevo (que se conserva)"
+CONSERVAR=1 CLAVE_DESTINO="$DB_PASSWORD" RED_DOCKER=inmobiliaria_default \
+  CONTEOS_ESPERADOS="$T/antes_del_desastre.txt" HASTA_ARCHIVO="$hasta_archivo" HASTA_POS="$hasta_pos" \
   ./scripts/probar-restauracion.sh
-rto=$(( $(date +%s) - inicio ))
 
 paso "8. Retención: 10 respaldos diarios simulados -> quedan 7"
 tmp=$(mktemp -d); mkdir -p "$tmp/diario"
@@ -57,7 +57,25 @@ quedan=$(ls -1 "$tmp"/diario/*.sql.gz | wc -l)
   || fallo "la rotación no conservó los más recientes"
 echo "OK: quedan $quedan respaldos diarios (se borraron los 3 más antiguos)."
 
-paso "9. Falla del servidor Master: promover la Replica sana"
+paso "9. Despliegue del backend contra el servidor restaurado y validación"
+DB_HOST_BACKEND=inmobiliaria-restauracion DB_HOST_REPLICA_BACKEND=inmobiliaria-restauracion \
+  docker compose --profile app up -d --build backend
+salud=""
+for i in $(seq 1 60); do
+  salud=$(curl -s localhost:8080/actuator/health | jq -r '.status // empty' 2>/dev/null || true)
+  [ "$salud" = UP ] && break
+  sleep 3
+done
+[ "$salud" = UP ] || { docker compose logs --tail=60 backend; fallo "el backend no quedó disponible contra el servidor restaurado"; }
+catalogo=$(curl -s localhost:8080/api/caracteristicas)
+n_api=$(echo "$catalogo" | jq 'length')
+echo "GET /actuator/health = $salud;  GET /api/caracteristicas = $n_api elementos (el Master dañado tiene 0)"
+[ "$n_api" = 20 ] || fallo "la API debía devolver 20 características y devolvió $n_api"
+echo "$catalogo" | jq -e 'map(.nombre) | index("dr_posterior_5")' >/dev/null || fallo "falta el último registro anterior al desastre"
+rto_total=$(( $(date +%s) - t0 ))
+echo "OK: la API sirve los datos recuperados (incluido el último registro previo al desastre)."
+
+paso "10. Falla del servidor Master: promover la Replica sana"
 docker stop "$MASTER" >/dev/null
 inicio=$(date +%s)
 ./scripts/promover-replica.sh
@@ -68,7 +86,8 @@ echo "OK: la Replica promovida acepta escrituras."
 
 echo
 echo "RESULTADO DEL SIMULACRO"
-echo "  Restauración Full + binlogs (17 tablas, filas idénticas al punto previo): OK, $rto s"
+echo "  Restauración Full + binlogs (17 tablas, filas idénticas al punto previo): OK"
+echo "  Recuperación completa medida (desde el desastre hasta la API sirviendo datos): $rto_total s"
 echo "  Retención 7 diarios: OK"
 echo "  Promoción de la Replica: OK, $rto_promocion s"
 echo "  Errores en la prueba de restauración: 0"

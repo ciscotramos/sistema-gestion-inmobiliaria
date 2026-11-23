@@ -10,6 +10,7 @@
 #   CONSERVAR=1                no borra el servidor restaurado (restauración real, no solo prueba)
 #   DESTINO                    nombre del contenedor (por defecto inmobiliaria-restauracion)
 #   IMAGEN_RESTAURACION        imagen del servidor nuevo (por defecto mysql:8.0-debian)
+#   RED_DOCKER                 red a la que se une el servidor nuevo (inmobiliaria_default para que lo vea el backend)
 #   CLAVE_DESTINO              clave root del servidor restaurado (si no, se genera una al azar)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -28,7 +29,7 @@ echo "Respaldo a restaurar: $COMPLETO"
 docker rm -f "$DESTINO" >/dev/null 2>&1 || true
 [ "${CONSERVAR:-0}" = 1 ] || trap 'docker rm -f "$DESTINO" >/dev/null 2>&1 || true' EXIT
 # Imagen Debian: trae mysqlbinlog y mysqlcheck, que la imagen mysql:8.0 (Oracle Linux) del compose no incluye.
-docker run -d --name "$DESTINO" -e MYSQL_ROOT_PASSWORD="$PW" "${IMAGEN_RESTAURACION:-mysql:8.0-debian}" \
+docker run -d --name "$DESTINO" ${RED_DOCKER:+--network "$RED_DOCKER"} -e MYSQL_ROOT_PASSWORD="$PW" "${IMAGEN_RESTAURACION:-mysql:8.0-debian}" \
   --skip-log-bin --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci >/dev/null
 for i in $(seq 1 60); do
   docker exec -e MYSQL_PWD="$PW" "$DESTINO" mysqladmin ping -h127.0.0.1 -uroot --silent 2>/dev/null && break
