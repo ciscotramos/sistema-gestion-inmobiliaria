@@ -82,3 +82,40 @@ jobs:
           docker compose --profile app logs --tail=150 backend
           docker compose logs --tail=30 mysql-master mysql-replica
           docker compose -f docker-compose.monitoring.yml logs --tail=60 prometheus alertmanager grafana
+
+  continuidad:
+    name: Continuidad (respaldo, restauración y simulacro DRP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar MySQL Master y Replica
+        run: |
+          cat > .env <<EOF
+          DB_PASSWORD=ci-master-$(openssl rand -hex 8)
+          DB_REPLICATION_PASSWORD=ci-repl-$(openssl rand -hex 8)
+          EOF
+          docker compose up -d --wait mysql-master mysql-replica
+          docker compose up replica-init --exit-code-from replica-init
+      - name: Simulacro de desastre (Full + binlogs, restauración verificada, retención y promoción de la Replica)
+        run: |
+          set -o pipefail
+          ./scripts/simulacro-desastre.sh 2>&1 | tee evidencia-continuidad.log
+      - name: Guardar la evidencia (registro del simulacro)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-continuidad
+          path: evidencia-continuidad.log
+          if-no-files-found: ignore
+      - name: Copia externa del respaldo (fuera del servidor, 30 días)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-externo
+          path: respaldos/
+          retention-days: 30
+          if-no-files-found: ignore
+      - name: Registros si falla
+        if: failure()
+        run: |
+          docker compose logs --tail=40 mysql-master mysql-replica

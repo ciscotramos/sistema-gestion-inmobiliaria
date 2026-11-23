@@ -42,3 +42,6 @@ backend/backup_*.sql
 # Secretos locales
 .env
 monitoring/secrets/
+
+# Respaldos locales (Sesión 31): nunca al repositorio
+respaldos/
