@@ -60,9 +60,14 @@ tablas=$(sql "$DESTINO" "$PW" -N -e "SELECT COUNT(*) FROM information_schema.tab
 [ "$tablas" = 17 ] || fallo "se esperaban 17 tablas y hay $tablas"
 echo "OK: $tablas tablas restauradas."
 
-malas=$(docker exec -e MYSQL_PWD="$PW" "$DESTINO" mysqlcheck -uroot --databases "$DB" 2>&1 | grep -vc 'OK$' || true)
-[ "$malas" = 0 ] || fallo "mysqlcheck reportó $malas tabla(s) con problemas"
-echo "OK: mysqlcheck sin errores de integridad."
+revision=$(docker exec -e MYSQL_PWD="$PW" "$DESTINO" mysqlcheck -uroot --databases "$DB" 2>&1 || true)
+revisadas=$(echo "$revision" | grep -cE "^$DB\." || true)
+malas=$(echo "$revision" | grep -E "^$DB\." | grep -v 'OK$' || true)
+if [ -n "$malas" ] || [ "$revisadas" != 17 ]; then
+  echo "Salida de mysqlcheck:"; echo "$revision" | sed 's/^/  /'
+  fallo "mysqlcheck: $revisadas tablas revisadas (se esperaban 17) o con problemas"
+fi
+echo "OK: mysqlcheck revisó $revisadas tablas sin errores de integridad."
 
 conteos_tablas "$DESTINO" "$PW" > "${TMPDIR:-/tmp}/conteos_restaurado.txt"
 echo "Filas por tabla en el servidor restaurado:"; sed 's/^/  /' "${TMPDIR:-/tmp}/conteos_restaurado.txt"
