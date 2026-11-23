@@ -98,8 +98,9 @@ services:
       replica-init:
         condition: service_completed_successfully
     environment:
-      DB_HOST: mysql-master
-      DB_HOST_REPLICA: mysql-replica
+      # Plan de continuidad (Sesión 31): tras restaurar en un servidor nuevo, estas variables apuntan el backend a él.
+      DB_HOST: ${DB_HOST_BACKEND:-mysql-master}
+      DB_HOST_REPLICA: ${DB_HOST_REPLICA_BACKEND:-mysql-replica}
       DB_PORT_MASTER: 3306
       DB_PORT_REPLICA: 3306
       DB_NAME: ${DB_NAME:-inmobiliaria_db}
