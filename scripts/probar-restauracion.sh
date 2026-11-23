@@ -9,6 +9,7 @@
 #   CONTEOS_ESPERADOS          archivo con filas por tabla que el resultado debe igualar
 #   CONSERVAR=1                no borra el servidor restaurado (restauración real, no solo prueba)
 #   DESTINO                    nombre del contenedor (por defecto inmobiliaria-restauracion)
+#   IMAGEN_RESTAURACION        imagen del servidor nuevo (por defecto mysql:8.0-debian)
 #   CLAVE_DESTINO              clave root del servidor restaurado (si no, se genera una al azar)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -26,7 +27,8 @@ echo "Respaldo a restaurar: $COMPLETO"
 
 docker rm -f "$DESTINO" >/dev/null 2>&1 || true
 [ "${CONSERVAR:-0}" = 1 ] || trap 'docker rm -f "$DESTINO" >/dev/null 2>&1 || true' EXIT
-docker run -d --name "$DESTINO" -e MYSQL_ROOT_PASSWORD="$PW" mysql:8.0 \
+# Imagen Debian: trae mysqlbinlog y mysqlcheck, que la imagen mysql:8.0 (Oracle Linux) del compose no incluye.
+docker run -d --name "$DESTINO" -e MYSQL_ROOT_PASSWORD="$PW" "${IMAGEN_RESTAURACION:-mysql:8.0-debian}" \
   --skip-log-bin --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci >/dev/null
 for i in $(seq 1 60); do
   docker exec -e MYSQL_PWD="$PW" "$DESTINO" mysqladmin ping -h127.0.0.1 -uroot --silent 2>/dev/null && break
@@ -50,8 +52,9 @@ if [ -n "${HASTA_ARCHIVO:-}" ] && [ -n "${HASTA_POS:-}" ]; then
     archivos+=("/tmp/binlogs/$b")
   done
   [ "${#archivos[@]}" -gt 0 ] || fallo "no hay binlogs entre $f0 y $HASTA_ARCHIVO"
-  docker exec -e MYSQL_PWD="$PW" "$DESTINO" sh -c \
-    "mysqlbinlog --skip-gtids --start-position=$p0 --stop-position=$HASTA_POS ${archivos[*]} | mysql -uroot"
+  docker exec "$DESTINO" which mysqlbinlog >/dev/null || fallo "la imagen de restauración no incluye mysqlbinlog"
+  docker exec -e MYSQL_PWD="$PW" "$DESTINO" bash -c \
+    "set -euo pipefail; mysqlbinlog --skip-gtids --start-position=$p0 --stop-position=$HASTA_POS ${archivos[*]} | mysql -uroot"
   echo "OK: binlogs reaplicados desde $f0:$p0 hasta $HASTA_ARCHIVO:$HASTA_POS (${#archivos[@]} archivo(s))."
 fi
 
