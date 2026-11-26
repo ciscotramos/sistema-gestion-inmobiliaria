@@ -15,6 +15,8 @@ services:
       SCALITY_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-verySecretKey1}
       S3BACKEND: file
       REMOTE_MANAGEMENT_DISABLE: "1"
+      # Nombre con el que el contenedor de respaldos llama al almacén (sin esto CloudServer responde InvalidURI)
+      ENDPOINT: almacen-s3
     ports:
       - "127.0.0.1:8000:8000"
     volumes:

@@ -62,7 +62,7 @@ services:
     ports:
       - "127.0.0.1:8080:80"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/lb-health | grep -q ok"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/lb-health | grep -q ok"]
       interval: 5s
       timeout: 3s
       retries: 12
