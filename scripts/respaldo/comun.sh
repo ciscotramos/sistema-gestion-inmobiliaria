@@ -10,7 +10,7 @@
 : "${COPIAS_LOCALES:=3}"          # copias cifradas que se conservan también en el volumen local
 : "${DIR:=/respaldos}"
 export AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-us-east-1}
-export AWS_PAGER=""
+export AWS_PAGER="" AWS_EC2_METADATA_DISABLED=true
 
 log() { echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] $*"; }
 # Cliente S3 con el endpoint del almacén (en producción: el bucket real, sin --endpoint-url)
