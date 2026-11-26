@@ -34,7 +34,7 @@ for i in $(seq 1 90); do [ "$(ciclos_ok)" -ge $((n0 + CICLOS)) ] && break; sleep
 docker logs "$RESP" 2>&1 | grep "CICLO_OK" | tail -n "$CICLOS" | sed -E 's/ sha256_cifrado=.*//; s/^/  /'
 
 paso "3. Frecuencia real de los respaldos (marcas de tiempo del almacén externo)"
-S3 s3api list-objects-v2 --bucket "$BUCKET" --prefix diario/ --query 'Contents[].[Key,Size,LastModified]' --output text | sort > "$T/objetos.txt"
+S3 s3api list-objects --bucket "$BUCKET" --prefix diario/ --query 'Contents[].[Key,Size,LastModified]' --output text | sort > "$T/objetos.txt"
 sed 's/^/  /' "$T/objetos.txt"
 total_obj=$(wc -l < "$T/objetos.txt")
 [ "$total_obj" -ge "$CICLOS" ] || fallo "el almacén externo tiene $total_obj objetos y se esperaban al menos $CICLOS"
@@ -100,7 +100,7 @@ rto=$(( $(date +%s) - inicio ))
 
 paso "7. Rotación local: solo se conservan las últimas copias cifradas"
 locales=$(docker exec "$RESP" sh -c 'ls -1 /respaldos/local/*.enc | wc -l')
-echo "  Copias locales cifradas: $locales (límite 3); objetos inmutables en el almacén: $(S3 s3api list-objects-v2 --bucket "$BUCKET" --prefix diario/ --query 'length(Contents)' --output text)"
+echo "  Copias locales cifradas: $locales (límite 3); objetos inmutables en el almacén: $(wc -l < "$T/objetos.txt")"
 [ "$locales" -le 3 ] || fallo "la rotación local no limitó las copias"
 
 echo
