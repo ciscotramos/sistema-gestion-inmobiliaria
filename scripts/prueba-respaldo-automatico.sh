@@ -132,4 +132,4 @@ echo "  Cifrado AES-256: verificado (sin clave ilegible, con clave incorrecta fa
 echo "  Inmutabilidad: COMPLIANCE; borrar, borrar con bypass y acortar retención rechazados"
 echo "  Restauración desde la copia externa: OK, 17 tablas con las mismas filas que el Master"
 echo "  RTO medido de la base (descarga + descifrado + restauración + verificación): ${rto} s"
-echo "  RPO del esquema: igual al periodo configurado (laboratorio ${intervalo_max} s; producción 24 h con diario + binlogs)"
+echo "  RPO del esquema: igual al periodo configurado (laboratorio ${intervalo_max} s; en producción, el periodo que se configure: 24 h por defecto, menos con BACKUP_INTERVALO_SEGUNDOS menor o sumando los binlogs de la Sesión 31)"
