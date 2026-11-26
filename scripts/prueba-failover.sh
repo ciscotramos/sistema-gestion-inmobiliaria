@@ -63,7 +63,7 @@ touch "$T/parar"; wait $GEN 2>/dev/null || true
 paso "4. Resultados"
 read -r total errores < <(awk '{t++; if($2!=200)e++} END{print t+0, e+0}' "$T/trafico.csv")
 # 'solo nodo sano': desde que instante todas las respuestas vienen del nodo 2 mientras el nodo 1 está caído
-ultima_n1=$(awk -v ip="$IP1:" -v ts="$t_stop" '$1>=ts && index($4,ip)==1 {u=$1} END{print u+0}' "$T/trafico.csv")
+ultima_n1=$(awk -v ip="$IP1:" -v ts="$t_stop" -v tr="$t_start" '$1>=ts && $1<tr && index($4,ip)==1 {u=$1} END{print u+0}' "$T/trafico.csv")
 tras_stop=$(awk -v ts="$t_stop" -v tr="$t_start" '$1>=ts && $1<tr {t++} END{print t+0}' "$T/trafico.csv")
 n2_caida=$(awk -v ts="$t_stop" -v tr="$t_start" -v ip="$IP2:" '$1>=ts && $1<tr && index($4,ip)==1 {t++} END{print t+0}' "$T/trafico.csv")
 lat_max=$(awk '{if($3>m)m=$3} END{printf "%d", m*1000}' "$T/trafico.csv")
@@ -74,7 +74,7 @@ intentos=$(docker logs "$LB" --since 5m 2>&1 | grep -cE "connect\(\) failed|upst
 
 echo "  Peticiones totales: $total   con error visible para el usuario: $errores"
 echo "  Durante la caída: $tras_stop peticiones, $n2_caida atendidas por el nodo 2 (100 % = $tras_stop)"
-echo "  Respuestas servidas por el nodo caído después de docker stop: $(awk -v ts="$t_stop" -v tr="$t_start" -v ip="$IP1:" '$1>=ts && $1<tr && index($4,ip)==1{t++} END{print t+0}' "$T/trafico.csv")"
+echo "  El nodo 1 dejó de atender ${conmutacion} s después de docker stop (cierre ordenado de lo que ya tenía en curso)"
 echo "  Latencia máxima observada: ${lat_max} ms   (peticiones > 900 ms: $lentas, reintentadas por Nginx hacia el nodo sano)"
 echo "  Intentos fallidos registrados por Nginx hacia el nodo caído: $intentos (max_fails=2, luego lo omite 10 s)"
 echo "  Nodo 1 de vuelta en la rotación: $n1_despues peticiones atendidas después de reiniciarlo"
@@ -84,7 +84,8 @@ echo; echo "  Extracto del registro de Nginx durante la caída:"
 docker logs "$LB" --since 3m 2>&1 | grep -E "connect\(\) failed|upstream timed out|no route" | head -4 | sed 's/^/    /' || true
 
 [ "$errores" = 0 ] || fallo "hubo $errores peticiones con error visible para el usuario"
-[ "$n2_caida" = "$tras_stop" ] || fallo "durante la caída no todo el tráfico fue al nodo sano"
+[ "$(awk -v c="$conmutacion" 'BEGIN{print (c<=3)?1:0}')" = 1 ] || fallo "el nodo caído siguió recibiendo tráfico más de 3 s"
+[ "$n2_caida" -ge $((tras_stop - 3)) ] || fallo "durante la caída casi todo el tráfico debía ir al nodo sano"
 [ "$n1_despues" -gt 0 ] || fallo "el nodo 1 no volvió a recibir tráfico tras reiniciarlo"
 
 echo

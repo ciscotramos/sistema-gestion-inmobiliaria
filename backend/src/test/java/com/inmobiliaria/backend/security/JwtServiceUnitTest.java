@@ -91,7 +91,10 @@ class JwtServiceUnitTest {
     void tokenAlterado_seRechaza() {
         JwtService service = servicio(SECRETO, 60_000);
         String token = service.generateToken(usuario);
-        String alterado = token.substring(0, token.length() - 2) + (token.endsWith("A") ? "BB" : "AA");
+        // Se altera un carácter del interior de la firma: los últimos caracteres de base64url pueden tener bits sin uso
+        // y, si solo cambian esos, el token decodifica igual (la prueba fallaba de forma intermitente).
+        int i = token.length() - 10;
+        String alterado = token.substring(0, i) + (token.charAt(i) == 'A' ? 'B' : 'A') + token.substring(i + 1);
 
         assertThrows(JwtException.class, () -> service.extractUsername(alterado));
     }
