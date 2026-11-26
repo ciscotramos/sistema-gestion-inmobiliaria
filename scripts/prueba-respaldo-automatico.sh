@@ -15,7 +15,17 @@ CICLOS=${CICLOS_ESPERADOS:-3}
 T=$(mktemp -d)
 paso() { echo; echo "== $1"; }
 fallo() { echo "FALLO: $1"; docker logs --tail 30 "$RESP" 2>&1 | sed 's/^/    /' || true; exit 1; }
-S3() { docker exec "$RESP" aws --endpoint-url http://almacen-s3:8000 "$@"; }
+# Cliente S3 con reintentos solo ante cortes de conexión del almacén (un AccessDenied no se reintenta)
+S3() {
+  local out rc n
+  for n in 1 2 3 4 5; do
+    out=$(docker exec "$RESP" aws --endpoint-url http://almacen-s3:8000 "$@" 2>&1) && { [ -z "$out" ] || echo "$out"; return 0; }
+    rc=$?
+    echo "$out" | grep -qE "AccessDenied|NoSuchKey|InvalidRequest|InvalidArgument" && { echo "$out"; return "$rc"; }
+    sleep 2
+  done
+  echo "$out"; return "$rc"
+}
 M() { sql "$MASTER" "$DB_PASSWORD" -N "$DB" "$@"; }
 ciclos_ok() { docker logs "$RESP" 2>&1 | grep -c "CICLO_OK" || true; }
 
