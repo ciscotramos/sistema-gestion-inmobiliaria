@@ -7,7 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 source scripts/lib-respaldo.sh
 : "${DB_PASSWORD:?Define DB_PASSWORD en .env}"
-: "${BACKUP_PASS:?Define BACKUP_PASS en .env}"
+: "${BACKUP_PASS:?Define BACKUP_PASS en .env}"; export BACKUP_PASS
 
 RESP=${CONTENEDOR_RESPALDO:-inmobiliaria-respaldo}
 BUCKET=${BACKUP_BUCKET:-respaldos-inmobiliaria}
