@@ -74,7 +74,7 @@ intentos=$(docker logs "$LB" --since 5m 2>&1 | grep -cE "connect\(\) failed|upst
 
 echo "  Peticiones totales: $total   con error visible para el usuario: $errores"
 echo "  Durante la caída: $tras_stop peticiones, $n2_caida atendidas por el nodo 2 (100 % = $tras_stop)"
-echo "  Tiempo hasta que el nodo 1 dejó de recibir tráfico tras docker stop: ${conmutacion} s"
+echo "  Respuestas servidas por el nodo caído después de docker stop: $(awk -v ts="$t_stop" -v tr="$t_start" -v ip="$IP1:" '$1>=ts && $1<tr && index($4,ip)==1{t++} END{print t+0}' "$T/trafico.csv")"
 echo "  Latencia máxima observada: ${lat_max} ms   (peticiones > 900 ms: $lentas, reintentadas por Nginx hacia el nodo sano)"
 echo "  Intentos fallidos registrados por Nginx hacia el nodo caído: $intentos (max_fails=2, luego lo omite 10 s)"
 echo "  Nodo 1 de vuelta en la rotación: $n1_despues peticiones atendidas después de reiniciarlo"
