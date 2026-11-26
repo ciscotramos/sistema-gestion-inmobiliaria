@@ -1,0 +1,68 @@
+# Alta disponibilidad (Taller Sesión 32): 2 nodos de la API detrás de un balanceador Nginx.
+# Se usa JUNTO con el compose base y REEMPLAZA al perfil "app" (el balanceador ocupa el puerto 8080):
+#   docker compose -f docker-compose.yml -f docker-compose.ha.yml up -d --build
+# El frontend no cambia: sigue llamando a http://localhost:8080.
+x-api-nodo: &api-nodo
+  build: ./backend
+  image: inmobiliaria-api:ha
+  restart: unless-stopped
+  environment:
+    DB_HOST: ${DB_HOST_BACKEND:-mysql-master}
+    DB_HOST_REPLICA: ${DB_HOST_REPLICA_BACKEND:-mysql-replica}
+    DB_PORT_MASTER: 3306
+    DB_PORT_REPLICA: 3306
+    DB_NAME: ${DB_NAME:-inmobiliaria_db}
+    DB_USER: root
+    DB_PASSWORD: ${DB_PASSWORD}
+    DB_PASSWORD_REPLICA: ${DB_PASSWORD_REPLICA:-${DB_PASSWORD}}
+    JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en .env}
+    CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
+    SEED_DEMO_USERS: ${SEED_DEMO_USERS:-false}
+    APP_ADMIN_EMAIL: ${APP_ADMIN_EMAIL:-}
+    APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-}
+    DB_SSL_MODE: DISABLED
+    MONITORING_TOKEN: ${MONITORING_TOKEN:-}
+    MONITORING_SIMULATION: ${MONITORING_SIMULATION:-false}
+  healthcheck:
+    test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+    interval: 5s
+    timeout: 3s
+    retries: 24
+    start_period: 20s
+
+services:
+  api-node-1:
+    <<: *api-nodo
+    container_name: inmobiliaria-api-1
+    depends_on:
+      replica-init:
+        condition: service_completed_successfully
+
+  api-node-2:
+    <<: *api-nodo
+    container_name: inmobiliaria-api-2
+    # Arranca cuando el nodo 1 ya está sano: evita que ambos creen a la vez el administrador inicial.
+    depends_on:
+      replica-init:
+        condition: service_completed_successfully
+      api-node-1:
+        condition: service_healthy
+
+  balanceador:
+    image: nginx:1.27-alpine
+    container_name: inmobiliaria-lb
+    restart: unless-stopped
+    depends_on:
+      api-node-1:
+        condition: service_healthy
+      api-node-2:
+        condition: service_healthy
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "127.0.0.1:8080:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/lb-health | grep -q ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 12

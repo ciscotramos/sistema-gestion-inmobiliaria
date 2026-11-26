@@ -121,3 +121,72 @@ jobs:
         run: |
           docker compose --profile app logs --tail=60 backend
           docker compose logs --tail=40 mysql-master mysql-replica
+
+  alta-disponibilidad:
+    name: Alta disponibilidad (2 nodos de API + Nginx, prueba de failover)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar base de datos, 2 nodos de la API y el balanceador
+        run: |
+          cat > .env <<EOF2
+          DB_PASSWORD=ci-master-$(openssl rand -hex 8)
+          DB_REPLICATION_PASSWORD=ci-repl-$(openssl rand -hex 8)
+          JWT_SECRET=ci-jwt-$(openssl rand -hex 24)
+          EOF2
+          docker compose up -d --wait mysql-master mysql-replica
+          docker compose up replica-init --exit-code-from replica-init
+          docker compose -f docker-compose.yml -f docker-compose.ha.yml up -d --build --wait balanceador
+          docker compose -f docker-compose.yml -f docker-compose.ha.yml ps
+      - name: Prueba de failover con tráfico continuo
+        run: |
+          set -o pipefail
+          ./scripts/prueba-failover.sh 2>&1 | tee evidencia-failover.log
+      - name: Guardar la evidencia (registro del failover)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidencia-failover
+          path: evidencia-failover.log
+          if-no-files-found: ignore
+      - name: Registros si falla
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.ha.yml logs --tail=60 balanceador api-node-1 api-node-2
+
+  respaldo-automatico:
+    name: Respaldo automático (cifrado AES-256, copia inmutable y restauración externa)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Levantar MySQL, almacén S3 y contenedor de respaldos (ciclo cada 20 s para la prueba)
+        run: |
+          cat > .env <<EOF2
+          DB_PASSWORD=ci-master-$(openssl rand -hex 8)
+          DB_REPLICATION_PASSWORD=ci-repl-$(openssl rand -hex 8)
+          JWT_SECRET=ci-jwt-$(openssl rand -hex 24)
+          BACKUP_PASS=ci-backup-$(openssl rand -hex 16)
+          BACKUP_INTERVALO_SEGUNDOS=20
+          EOF2
+          docker compose up -d --wait mysql-master mysql-replica
+          docker compose up replica-init --exit-code-from replica-init
+          docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d --build respaldo
+      - name: Prueba de respaldo automático, inmutabilidad y restauración desde la copia externa
+        run: |
+          set -o pipefail
+          ./scripts/prueba-respaldo-automatico.sh 2>&1 | tee evidencia-respaldo-automatico.log
+      - name: Guardar la evidencia (registro de la prueba y del contenedor de respaldos)
+        if: always()
+        run: docker logs inmobiliaria-respaldo > registro-contenedor-respaldo.log 2>&1 || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evidencia-respaldo-automatico
+          path: |
+            evidencia-respaldo-automatico.log
+            registro-contenedor-respaldo.log
+          if-no-files-found: ignore
+      - name: Registros si falla
+        if: failure()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.backup.yml logs --tail=60 respaldo almacen-s3
