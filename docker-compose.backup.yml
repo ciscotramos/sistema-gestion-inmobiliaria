@@ -1,0 +1,59 @@
+# Respaldos automáticos con copia inmutable (Taller Sesión 32).
+# Se usa JUNTO al compose base:
+#   docker compose -f docker-compose.yml -f docker-compose.backup.yml up -d --build mysql-master mysql-replica respaldo
+#
+# `almacen-s3` es un servidor compatible con S3 (Scality CloudServer) que SOLO se usa en el laboratorio/CI.
+# En producción se elimina y se apunta a un bucket real de otra región/proveedor (S3_ENDPOINT vacío en el cliente).
+# Nota: las imágenes comunitarias de MinIO se retiraron de Docker Hub, por eso se usa CloudServer.
+services:
+  almacen-s3:
+    image: ${S3_IMAGE:-zenko/cloudserver:latest-7.70.10}
+    container_name: inmobiliaria-almacen
+    restart: unless-stopped
+    environment:
+      SCALITY_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-accessKey1}
+      SCALITY_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-verySecretKey1}
+      S3BACKEND: file
+      REMOTE_MANAGEMENT_DISABLE: "1"
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - almacen-datos:/usr/src/app/localData
+      - almacen-meta:/usr/src/app/localMetadata
+
+  respaldo:
+    build: ./scripts/respaldo
+    image: inmobiliaria-respaldo:s32
+    container_name: inmobiliaria-respaldo
+    restart: unless-stopped
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      almacen-s3:
+        condition: service_started
+    environment:
+      DB_HOST: mysql-master
+      DB_NAME: ${DB_NAME:-inmobiliaria_db}
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      BACKUP_PASS: ${BACKUP_PASS:?Define BACKUP_PASS en .env (clave de cifrado de los respaldos)}
+      S3_ENDPOINT: http://almacen-s3:8000
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-accessKey1}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-verySecretKey1}
+      BUCKET: ${BACKUP_BUCKET:-respaldos-inmobiliaria}
+      RETENCION_DIAS: ${BACKUP_RETENCION_DIAS:-1}
+      INTERVALO_SEGUNDOS: ${BACKUP_INTERVALO_SEGUNDOS:-86400}
+      HORA_UTC: ${BACKUP_HORA_UTC:-}
+    volumes:
+      - respaldos-auto:/respaldos
+    healthcheck:
+      # Sano = hubo un respaldo exitoso en los últimos 2 periodos (si no, el contenedor pasa a "unhealthy")
+      test: ["CMD-SHELL", "[ -f /respaldos/estado/ultimo_ok ] && [ $$(( $$(date +%s) - $$(cat /respaldos/estado/ultimo_ok) )) -lt $$(( $${INTERVALO_SEGUNDOS} * 2 + 60 )) ]"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  almacen-datos:
+  almacen-meta:
+  respaldos-auto:
