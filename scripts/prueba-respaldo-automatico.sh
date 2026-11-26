@@ -14,7 +14,12 @@ BUCKET=${BACKUP_BUCKET:-respaldos-inmobiliaria}
 CICLOS=${CICLOS_ESPERADOS:-3}
 T=$(mktemp -d)
 paso() { echo; echo "== $1"; }
-fallo() { echo "FALLO: $1"; docker logs --tail 30 "$RESP" 2>&1 | sed 's/^/    /' || true; exit 1; }
+fallo() {
+  echo "FALLO: $1"
+  echo "  -- contenedor de respaldos:"; docker logs --tail 15 "$RESP" 2>&1 | sed 's/^/    /' || true
+  echo "  -- almacén S3:"; docker logs --tail 25 inmobiliaria-almacen 2>&1 | cut -c1-300 | sed 's/^/    /' || true
+  exit 1
+}
 # Cliente S3 con reintentos solo ante cortes de conexión del almacén (un AccessDenied no se reintenta)
 S3() {
   local out rc n
@@ -24,7 +29,7 @@ S3() {
     echo "$out" | grep -qE "AccessDenied|NoSuchKey|InvalidRequest|InvalidArgument" && { echo "$out"; return "$rc"; }
     sleep 2
   done
-  echo "$out"; return "$rc"
+  echo "$out"; echo "S3 falló: aws $*: $out" >&2; return "$rc"
 }
 M() { sql "$MASTER" "$DB_PASSWORD" -N "$DB" "$@"; }
 ciclos_ok() { docker logs "$RESP" 2>&1 | grep -c "CICLO_OK" || true; }
@@ -48,8 +53,9 @@ paso "3. Frecuencia real de los respaldos (marcas de tiempo del almacén externo
 docker logs "$RESP" 2>&1 | sed -nE 's/.*CICLO_OK nombre=([^ ]+) .*/\1/p' | sort > "$T/nombres.txt"
 : > "$T/objetos.txt"
 while read -r n; do
-  S3 s3api head-object --bucket "$BUCKET" --key "diario/$n.sql.gz.enc" --query '[ContentLength,LastModified]' --output text \
-    | awk -v k="diario/$n.sql.gz.enc" '{print k "\t" $1 "\t" $2}' >> "$T/objetos.txt"
+  r=$(S3 s3api head-object --bucket "$BUCKET" --key "diario/$n.sql.gz.enc" --query '[ContentLength,LastModified]' --output text) \
+    || { echo "$r"; docker exec "$RESP" aws --debug --endpoint-url http://almacen-s3:8000 s3api head-object --bucket "$BUCKET" --key "diario/$n.sql.gz.enc" 2>&1 | tail -25 | cut -c1-250; fallo "no se pudo consultar el objeto $n en el almacén"; }
+  echo "$r" | awk -v k="diario/$n.sql.gz.enc" '{print k "\t" $1 "\t" $2}' >> "$T/objetos.txt"
 done < "$T/nombres.txt"
 sed 's/^/  /' "$T/objetos.txt"
 total_obj=$(wc -l < "$T/objetos.txt")
