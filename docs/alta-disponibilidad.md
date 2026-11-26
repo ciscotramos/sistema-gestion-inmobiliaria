@@ -43,7 +43,7 @@ Se envía tráfico continuo (10 peticiones/s) a `GET /api/caracteristicas`, se d
 | Reparto de 40 peticiones con ambos nodos | nodo 1 = 21, nodo 2 = 19 |
 | Peticiones totales durante la prueba | 316 |
 | Errores visibles para el usuario | **0** |
-| Peticiones durante la caída | 42 (41 con el nodo 2 identificado en `X-Served-By`; la restante respondió 200 sin cabecera identificable) |
+| Peticiones durante la caída | 42, todas con respuesta 200: 41 las atendió el nodo 2 y 1 el nodo 1 en el mismo instante de la orden de detenerlo (0,0 s), cuando aún se estaba cerrando |
 | Latencia máxima | 1008 ms (8 peticiones > 900 ms: Nginx esperó 1 s al nodo caído y reintentó en el sano) |
 | Intentos fallidos de Nginx hacia el nodo caído | 11 (luego lo omite 10 s) |
 | Nodo 1 reintegrado | 43 peticiones atendidas por él tras reiniciarlo; 12 s hasta estar sano |
